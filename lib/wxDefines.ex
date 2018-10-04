@@ -1,7 +1,6 @@
 defmodule WxDefines do
   defmacro __using__(_opts) do
     quote do
-      #import Defines
       import Bitwise
       @wxDefaultSize {-1, -1}
       @wxDefaultPosition {-1, -1}

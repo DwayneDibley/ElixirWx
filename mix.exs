@@ -6,7 +6,7 @@ defmodule Elixirwx.MixProject do
       version: "0.1.0",
       #deps: deps(),
       package: package(),
-      description: "wxWindows interface fpr Elixir" ]
+      description: "wxWindows interface for Elixir" ]
   end
 
   # Configuration for the OTP application
