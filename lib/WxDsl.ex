@@ -7,7 +7,7 @@ defmodule WxDsl do
       import WxDsl
       require Logger
       import WxFunctions
-      use Defines
+      use wxDefines
     end
   end
 
