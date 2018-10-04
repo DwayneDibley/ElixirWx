@@ -1,0 +1,7 @@
+
+*.elixir
+*.elixir_scm
+*.protocols
+*.xref
+*.beam
+*.3_test
