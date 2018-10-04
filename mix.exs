@@ -4,7 +4,7 @@ defmodule Elixirwx.MixProject do
   def project do
     [ app: :elixirwx,
       version: "0.1.0",
-      deps: deps(),
+      #deps: deps(),
       package: package(),
       description: "wxWindows interface fpr Elixir" ]
   end
