@@ -390,58 +390,42 @@ defmodule WxDsl do
   end
 
   ## ---------------------------------------------------------------------------
-  ## Buttons
+  ## Button
   ## ---------------------------------------------------------------------------
+  @doc """
+  Generate a button.
+  Attributes:
+    label: The text that will be on the button.
+    size:  The size of the button {Width, Height}
+    pos:   The position of the button {X, Y}
+  """
   defmacro button(attributes) do
     quote do
       {parent, container} = stack_tos()
 
-      Logger.debug("button: {parent, container} = #{inspect(parent)}, #{inspect(container)}}")
+      {newId, id, optList, errors} =
+        getOptions(unquote(attributes), [:label, :size, :pos, :style])
 
-      attributes = unquote(attributes)
-      Logger.debug("  attributes=#{inspect(attributes)}")
-      new_id = :wx_misc.newId()
-
-      attrs = get_opts_map(attributes)
-
-      options =
-        Enum.filter(attributes, fn attr ->
-          case attr do
-            {:label, _} ->
-              true
-
-            {:id, _} ->
-              false
-
-            _ ->
-              Logger.error("  invalid attribute")
-              false
-          end
-        end)
-
-      Logger.debug(
-        "  :button.new(#{inspect(container)}, #{inspect(new_id)}, #{inspect(options)})"
-      )
-
-      # :wxStaticText.new(parent, 1001, "Output Area", [])
-      bt = :wxButton.new(container, new_id, options)
-
-      case parent do
-        {:wx_ref, _, :wxBoxSizer, _} ->
-          Logger.debug("  :wxBoxSizer.add(#{inspect(parent)}, #{inspect(bt)}), []")
-          :wxBoxSizer.add(parent, bt, [])
-
-        {:wx_ref, _, :wxStaticBoxSizer, _} ->
-          Logger.debug("  :wxBoxSizer.add(#{inspect(parent)}, #{inspect(bt)}), []")
-          :wxStaticBoxSizer.add(parent, bt, [])
+      case length(errors) do
+        0 -> nil
+        _ -> Logger.error("Error: Invalid Button Option(s): #{inspect(errors)}")
       end
 
-      Logger.debug("Button put info 2@@@@@@@@@@@@@@@@@@")
-      put_info(var!(info, Dsl), Map.get(attrs, :id, :unknown), bt)
-      put_xref(var!(xref, Dsl), new_id, Map.get(attrs, :id, :unknown))
+      Logger.debug("  :button.new(#{inspect(container)}, #{inspect(newId)}, #{inspect(optList)})")
+      bt = :wxButton.new(container, newId, optList)
 
-      # stack_push( sb)
-      # unquote(block)
+      # The button must be addd to the parent.
+      case addControlToSizer(parent, bt) do
+        :error ->
+          Logger.error("addControlToSizer: cannot add #{inspect(bt)} to: #{inspect(parent)}")
+
+        _ ->
+          Logger.debug("Added button to sizer")
+      end
+
+      put_info(var!(info, Dsl), id, bt)
+      put_xref(var!(xref, Dsl), newId, id)
+
       Logger.debug("button: ================================")
     end
   end
@@ -841,5 +825,54 @@ defmodule WxDsl do
 
   def is_member(list, item) do
     Enum.find(list, fn x -> x == item end)
+  end
+
+  @doc """
+  Get the options from athe attributes, according to the given list
+  The id: option is ignored
+  """
+  def getOptions(attributes, opts) do
+    id =
+      case attributes[:id] do
+        nil -> :unknown
+        other -> other
+      end
+
+    {optList, errors} = getOptList(attributes, opts)
+
+    {:wx_misc.newId(), id, optList, errors}
+  end
+
+  def getOptList(attributes, opts) do
+    getOptList(List.keydelete(attributes, :id, 0), [], opts)
+  end
+
+  def getOptList(attributes, optList, []) do
+    {optList, attributes}
+  end
+
+  def getOptList(attributes, optList, [h | t]) do
+    optList =
+      case attributes[h] do
+        nil -> optList
+        val -> [{h, val} | optList]
+      end
+
+    getOptList(List.keydelete(attributes, h, 0), optList, t)
+  end
+
+  def addControlToSizer(parent, control) do
+    case parent do
+      {:wx_ref, _, :wxBoxSizer, _} ->
+        :wxBoxSizer.add(parent, control, [])
+        :ok
+
+      {:wx_ref, _, :wxStaticBoxSizer, _} ->
+        :wxStaticBoxSizer.add(parent, control, [])
+        :ok
+
+      _ ->
+        :error
+    end
   end
 end

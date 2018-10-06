@@ -4,7 +4,9 @@ defmodule WxDefines do
       import Bitwise
       @wxDefaultSize {-1, -1}
       @wxDefaultPosition {-1, -1}
-      # ERROR             @wxBLACK   wxe_util:get_const(wxBLACK
+
+      # These are not available until the window has been initialised
+      # ERROR             @wxBLACK   :wxe_util.get_const(:wxBLACK)
       # ERROR             @wxBLACK_BRUSH   wxe_util:get_const(wxBLACK_BRUSH
       # ERROR             @wxBLACK_DASHED_PEN   wxe_util:get_const(wxBLACK_DASHED_PEN
       # ERROR             @wxBLACK_PEN   wxe_util:get_const(wxBLACK_PEN
@@ -34,7 +36,7 @@ defmodule WxDefines do
       # ERROR             @wxNullIcon   wxe_util:get_const(wxNullIcon
       # ERROR             @wxNullPalette   wxe_util:get_const(wxNullPalette
       # ERROR             @wxNullPen   wxe_util:get_const(wxNullPen
-      # ERROR             @wxRED   wxe_util:get_const(wxRED
+      # @wxRED   :wxe_util.get_const(:wxRED)
       # ERROR             @wxRED_BRUSH   wxe_util:get_const(wxRED_BRUSH
       # ERROR             @wxRED_PEN   wxe_util:get_const(wxRED_PEN
       # ERROR             @wxSMALL_FONT   wxe_util:get_const(wxSMALL_FONT
@@ -47,6 +49,52 @@ defmodule WxDefines do
       # ERROR             @wxWHITE_PEN   wxe_util:get_const(wxWHITE_PEN
       # ERROR             @wxEVT_COMMAND_BOOKCTRL_PAGE_CHANGING  ?wxEVT_COMMAND_NOTEBOOK_PAGE_CHANGING
       # ERROR             @wxEVT_COMMAND_BOOKCTRL_PAGE_CHANGED  ?wxEVT_COMMAND_NOTEBOOK_PAGE_CHANGED
+
+      # These are not available until the window has been initialised
+      @wxBLACK :wxBLACK
+      @wxBLACK_BRUSH :wxBLACK_BRUSH
+      @wxBLACK_DASHED_PEN :wxBLACK_DASHED_PEN
+      @wxBLACK_PEN :wxBLACK_PEN
+      @wxBLUE :wxBLUE
+      @wxBLUE_BRUSH :wxBLUE_BRUSH
+      @wxCROSS_CURSOR :wxCROSS_CURSOR
+      @wxCYAN :wxCYAN
+      @wxCYAN_BRUSH :wxCYAN_BRUSH
+      @wxCYAN_PEN :wxCYAN_PEN
+      @wxGREEN :wxGREEN
+      @wxGREEN_BRUSH :wxGREEN_BRUSH
+      @wxGREEN_PEN :wxGREEN_PEN
+      @wxGREY_BRUSH :wxGREY_BRUSH
+      @wxGREY_PEN :wxGREY_PEN
+      @wxHOURGLASS_CURSOR :wxHOURGLASS_CURSOR
+      @wxITALIC_FONT :wxITALIC_FONT
+      @wxLIGHT_GREY :wxLIGHT_GREY
+      @wxLIGHT_GREY_BRUSH :wxLIGHT_GREY_BRUSH
+      @wxLIGHT_GREY_PEN :wxLIGHT_GREY_PEN
+      @wxMEDIUM_GREY_BRUSH :wxMEDIUM_GREY_BRUSH
+      @wxMEDIUM_GREY_PEN :wxMEDIUM_GREY_PEN
+      @wxNORMAL_FONT :wxNORMAL_FONT
+      @wxNullBitmap :wxNullBitmap
+      @wxNullBrush :wxNullBrush
+      @wxNullCursor :wxNullCursor
+      @wxNullFont :wxNullFont
+      @wxNullIcon :wxNullIcon
+      @wxNullPalette :wxNullPalette
+      @wxNullPen :wxNullPen
+      @wxRED :wxRED
+      @wxRED_BRUSH :wxRED_BRUSH
+      @wxRED_PEN :wxRED_PEN
+      @wxSMALL_FONT :wxSMALL_FONT
+      @wxSTANDARD_CURSOR :wxSTANDARD_CURSOR
+      @wxSWISS_FONT :wxSWISS_FONT
+      @wxTRANSPARENT_BRUSH :wxTRANSPARENT_BRUSH
+      @wxTRANSPARENT_PEN :wxTRANSPARENT_PEN
+      @wxWHITE :wxWHITE
+      @wxWHITE_BRUSH :wxWHITE_BRUSH
+      @wxWHITE_PEN :wxWHITE_PEN
+      # @wxEVT_COMMAND_BOOKCTRL_PAGE_CHANGING  :wxEVT_COMMAND_NOTEBOOK_PAGE_CHANGING
+      # @wxEVT_COMMAND_BOOKCTRL_PAGE_CHANGED   :wxEVT_COMMAND_NOTEBOOK_PAGE_CHANGED
+
       @wxBK_RIGHT 128
       @wxBK_LEFT 64
       @wxBK_BOTTOM 32
@@ -1724,9 +1772,9 @@ defmodule WxDefines do
       @wxTE_PASSWORD 2048
       @wxTE_PROCESS_ENTER 1024
       @wxTE_RICH 128
-      # ERROR             @wxTE_CENTRE  ?wxTE_CENTER
       @wxTE_RIGHT 512
       @wxTE_CENTER 256
+      @wxTE_CENTRE 256
       @wxTE_LEFT 0
       @wxTE_PROCESS_TAB 64
       @wxTE_MULTILINE 32

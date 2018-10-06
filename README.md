@@ -1,4 +1,3 @@
 # ElixirWx
-An Elixir interface to WxWindows
-
+A test suite for an Elixir interface to WxWindows
 ----
