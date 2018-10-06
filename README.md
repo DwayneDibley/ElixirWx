@@ -192,6 +192,7 @@ def createWindow(show) do
 
 The created window looks lke this:
 
+<<<<<<< HEAD
 ![Screen Shot 2018-10-06 at 14.03.16](def createWindow(show) do
 ​    window show: show do
 ​      # Create a frame with a status bar and a menu.
@@ -234,7 +235,10 @@ The created window looks lke this:
       event(:command_button_clicked)
     end
   end)
+=======
+![Screen Shot 2018-10-06 at 14.03.16](./Screen_shot.png)
+>>>>>>> 1e843900da844e02e2c199b870de78f9e659eba5
 
 
 
-The code is a long way from finished, but I (at least) am encouraged by the results so far![Screen Shot 2018-10-06 at 14.03.16](/Users/rwe/Desktop/Screen Shot 2018-10-06 at 14.03.16.png)...
+The code is a long way from finished, but I (at least) am encouraged by the results so far!...
