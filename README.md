@@ -192,8 +192,8 @@ def createWindow(show) do
 
 The created window looks lke this:
 
-![Screen Shot 2018-10-06 at 14.03.16](/Users/rwe/Desktop/Screen Shot 2018-10-06 at 14.03.16.png)
+![Screen Shot 2018-10-06 at 14.03.16](./Screen_shot.png)
 
 
 
-The code is a long way from finished, but I (at least) am encouraged by the results so far![Screen Shot 2018-10-06 at 14.03.16](/Users/rwe/Desktop/Screen Shot 2018-10-06 at 14.03.16.png)...
+The code is a long way from finished, but I (at least) am encouraged by the results so far!...
