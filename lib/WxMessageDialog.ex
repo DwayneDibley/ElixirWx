@@ -46,7 +46,6 @@ defmodule WxMessageDialog do
     if length(errors) != 0,
       do: Logger.warn("WxMessageDialog.new() invalid option(s): #{inspect(errors)}")
 
-    IO.inspect("options = #{inspect(options)}")
     md = :wxMessageDialog.new(parent, message, options)
 
     ret =
@@ -61,7 +60,6 @@ defmodule WxMessageDialog do
 
         {true, false} ->
           ret = :wxMessageDialog.show(md)
-          IO.inspect("show non Modal returned: #{inspect(ret)}")
           md
       end
 
@@ -77,11 +75,9 @@ defmodule WxMessageDialog do
   def show(dialog, modal \\ true) do
     case modal do
       true ->
-        IO.inspect("show Modal")
         :wxMessageDialog.showModal(dialog)
 
       false ->
-        IO.inspect("show non Modal")
         :wxMessageDialog.show(dialog)
     end
   end
