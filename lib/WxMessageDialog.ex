@@ -14,11 +14,10 @@ defmodule WxMessageDialog do
       pos:            Has no effect.
 
   returns:
-    If showing modally, returns the button that was clicked as an atom
-    (:ok, :no or :cancel) else the dialog object is returned.
+      If showing modally, returns the button that was clicked as an atom
+      (:ok, :no or :cancel) else the dialog object is returned.
   """
   def create(parent, message \\ "", options \\ []) do
-    IO.inspect("...")
 
     parent =
       case parent do
@@ -60,6 +59,7 @@ defmodule WxMessageDialog do
 
         {true, false} ->
           ret = :wxMessageDialog.show(md)
+          Logger.debug("show non Modal returned: #{inspect(ret)}")
           md
       end
 
