@@ -1,6 +1,6 @@
 
 # ElixirWx
-==Note==  I will only be updating this repository occasionally. The current version of ElixirWx can be found in the /deps directory in the ElixirWxTests repository
+==Note==  I will only be updating this repository occasionally. The current version of ElixirWx can be found in the /lib/ElixirEx directory in the ElixirWxTests repository
 
 An Elixir interface to wxErlang
 ----
@@ -190,6 +190,6 @@ def createWindow(show) do
   end
 ```
 
-You can see a screenshot of the created window in the img directory....
+You can see a screenshots of the created window in the img directory....
 
 The code is a long way from finished, but I (at least) am encouraged by the results so far!...
