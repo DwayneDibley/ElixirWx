@@ -1,6 +1,6 @@
 
 # ElixirWx
-==Note==  I will only be updating this repository occasionally. The current version of ElixirWx can be found in the /lib/ElixirEx directory in the ElixirWxTests repository
+==Note==  I will only be updating this repository occasionally. The current version of ElixirWx can be found in the /lib/ElixirWx directory in the ElixirWxTests repository
 
 An Elixir interface to wxErlang
 ----
