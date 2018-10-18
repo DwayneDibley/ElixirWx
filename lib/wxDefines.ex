@@ -1,99 +1,177 @@
 defmodule WxDefines do
+  @moduledoc """
+  ```
+  WxWindows defines
+  """
+
   defmacro __using__(_opts) do
     quote do
       import Bitwise
       @wxDefaultSize {-1, -1}
       @wxDefaultPosition {-1, -1}
 
-      # These are not available until the window has been initialised
-      # ERROR             @wxBLACK   :wxe_util.get_const(:wxBLACK)
-      # ERROR             @wxBLACK_BRUSH   wxe_util:get_const(wxBLACK_BRUSH
-      # ERROR             @wxBLACK_DASHED_PEN   wxe_util:get_const(wxBLACK_DASHED_PEN
-      # ERROR             @wxBLACK_PEN   wxe_util:get_const(wxBLACK_PEN
-      # ERROR             @wxBLUE   wxe_util:get_const(wxBLUE
-      # ERROR             @wxBLUE_BRUSH   wxe_util:get_const(wxBLUE_BRUSH
-      # ERROR             @wxCROSS_CURSOR   wxe_util:get_const(wxCROSS_CURSOR
-      # ERROR             @wxCYAN   wxe_util:get_const(wxCYAN
-      # ERROR             @wxCYAN_BRUSH   wxe_util:get_const(wxCYAN_BRUSH
-      # ERROR             @wxCYAN_PEN   wxe_util:get_const(wxCYAN_PEN
-      # ERROR             @wxGREEN   wxe_util:get_const(wxGREEN
-      # ERROR             @wxGREEN_BRUSH   wxe_util:get_const(wxGREEN_BRUSH
-      # ERROR             @wxGREEN_PEN   wxe_util:get_const(wxGREEN_PEN
-      # ERROR             @wxGREY_BRUSH   wxe_util:get_const(wxGREY_BRUSH
-      # ERROR             @wxGREY_PEN   wxe_util:get_const(wxGREY_PEN
-      # ERROR             @wxHOURGLASS_CURSOR   wxe_util:get_const(wxHOURGLASS_CURSOR
-      # ERROR             @wxITALIC_FONT   wxe_util:get_const(wxITALIC_FONT
-      # ERROR             @wxLIGHT_GREY   wxe_util:get_const(wxLIGHT_GREY
-      # ERROR             @wxLIGHT_GREY_BRUSH   wxe_util:get_const(wxLIGHT_GREY_BRUSH
-      # ERROR             @wxLIGHT_GREY_PEN   wxe_util:get_const(wxLIGHT_GREY_PEN
-      # ERROR             @wxMEDIUM_GREY_BRUSH   wxe_util:get_const(wxMEDIUM_GREY_BRUSH
-      # ERROR             @wxMEDIUM_GREY_PEN   wxe_util:get_const(wxMEDIUM_GREY_PEN
-      # ERROR             @wxNORMAL_FONT   wxe_util:get_const(wxNORMAL_FONT
-      # ERROR             @wxNullBitmap   wxe_util:get_const(wxNullBitmap
-      # ERROR             @wxNullBrush   wxe_util:get_const(wxNullBrush
-      # ERROR             @wxNullCursor   wxe_util:get_const(wxNullCursor
-      # ERROR             @wxNullFont   wxe_util:get_const(wxNullFont
-      # ERROR             @wxNullIcon   wxe_util:get_const(wxNullIcon
-      # ERROR             @wxNullPalette   wxe_util:get_const(wxNullPalette
-      # ERROR             @wxNullPen   wxe_util:get_const(wxNullPen
-      # @wxRED   :wxe_util.get_const(:wxRED)
-      # ERROR             @wxRED_BRUSH   wxe_util:get_const(wxRED_BRUSH
-      # ERROR             @wxRED_PEN   wxe_util:get_const(wxRED_PEN
-      # ERROR             @wxSMALL_FONT   wxe_util:get_const(wxSMALL_FONT
-      # ERROR             @wxSTANDARD_CURSOR   wxe_util:get_const(wxSTANDARD_CURSOR
-      # ERROR             @wxSWISS_FONT   wxe_util:get_const(wxSWISS_FONT
-      # ERROR             @wxTRANSPARENT_BRUSH   wxe_util:get_const(wxTRANSPARENT_BRUSH
-      # ERROR             @wxTRANSPARENT_PEN   wxe_util:get_const(wxTRANSPARENT_PEN
-      # ERROR             @wxWHITE   wxe_util:get_const(wxWHITE
-      # ERROR             @wxWHITE_BRUSH   wxe_util:get_const(wxWHITE_BRUSH
-      # ERROR             @wxWHITE_PEN   wxe_util:get_const(wxWHITE_PEN
-      # ERROR             @wxEVT_COMMAND_BOOKCTRL_PAGE_CHANGING  ?wxEVT_COMMAND_NOTEBOOK_PAGE_CHANGING
-      # ERROR             @wxEVT_COMMAND_BOOKCTRL_PAGE_CHANGED  ?wxEVT_COMMAND_NOTEBOOK_PAGE_CHANGED
-
-      # These are not available until the window has been initialised
-      @wxBLACK :wxBLACK
-      @wxBLACK_BRUSH :wxBLACK_BRUSH
-      @wxBLACK_DASHED_PEN :wxBLACK_DASHED_PEN
-      @wxBLACK_PEN :wxBLACK_PEN
-      @wxBLUE :wxBLUE
-      @wxBLUE_BRUSH :wxBLUE_BRUSH
-      @wxCROSS_CURSOR :wxCROSS_CURSOR
-      @wxCYAN :wxCYAN
-      @wxCYAN_BRUSH :wxCYAN_BRUSH
-      @wxCYAN_PEN :wxCYAN_PEN
-      @wxGREEN :wxGREEN
-      @wxGREEN_BRUSH :wxGREEN_BRUSH
-      @wxGREEN_PEN :wxGREEN_PEN
-      @wxGREY_BRUSH :wxGREY_BRUSH
-      @wxGREY_PEN :wxGREY_PEN
-      @wxHOURGLASS_CURSOR :wxHOURGLASS_CURSOR
-      @wxITALIC_FONT :wxITALIC_FONT
-      @wxLIGHT_GREY :wxLIGHT_GREY
-      @wxLIGHT_GREY_BRUSH :wxLIGHT_GREY_BRUSH
-      @wxLIGHT_GREY_PEN :wxLIGHT_GREY_PEN
-      @wxMEDIUM_GREY_BRUSH :wxMEDIUM_GREY_BRUSH
-      @wxMEDIUM_GREY_PEN :wxMEDIUM_GREY_PEN
-      @wxNORMAL_FONT :wxNORMAL_FONT
-      @wxNullBitmap :wxNullBitmap
-      @wxNullBrush :wxNullBrush
-      @wxNullCursor :wxNullCursor
-      @wxNullFont :wxNullFont
-      @wxNullIcon :wxNullIcon
-      @wxNullPalette :wxNullPalette
-      @wxNullPen :wxNullPen
-      @wxRED :wxRED
-      @wxRED_BRUSH :wxRED_BRUSH
-      @wxRED_PEN :wxRED_PEN
-      @wxSMALL_FONT :wxSMALL_FONT
-      @wxSTANDARD_CURSOR :wxSTANDARD_CURSOR
-      @wxSWISS_FONT :wxSWISS_FONT
-      @wxTRANSPARENT_BRUSH :wxTRANSPARENT_BRUSH
-      @wxTRANSPARENT_PEN :wxTRANSPARENT_PEN
-      @wxWHITE :wxWHITE
-      @wxWHITE_BRUSH :wxWHITE_BRUSH
-      @wxWHITE_PEN :wxWHITE_PEN
-      # @wxEVT_COMMAND_BOOKCTRL_PAGE_CHANGING  :wxEVT_COMMAND_NOTEBOOK_PAGE_CHANGING
-      # @wxEVT_COMMAND_BOOKCTRL_PAGE_CHANGED   :wxEVT_COMMAND_NOTEBOOK_PAGE_CHANGED
+      @wxBLACK {0, 0, 0}
+      @wxWHITE {255, 255, 255}
+      @wxRED {255, 0, 0}
+      @wxLIME {0, 255, 0}
+      @wxBLUE {0, 0, 255}
+      @wxYELLOW {255, 255, 0}
+      @wxCYAN {0, 255, 255}
+      @wxAQUA {0, 255, 255}
+      @wxMAGENTA {255, 0, 255}
+      @wxFUCHSIA {255, 0, 255}
+      @wxSILVER {192, 192, 192}
+      @wxGRAY {128, 128, 128}
+      @wxMAROON {128, 0, 0}
+      @wxOLIVE {128, 128, 0}
+      @wxGREEN {0, 128, 0}
+      @wxPURPLE {128, 0, 128}
+      @wxTEAL {0, 128, 128}
+      @wxNAVY {0, 0, 128}
+      @wxMAROON {128, 0, 0}
+      @wxDARK_RED {139, 0, 0}
+      @wxBROWN {165, 42, 42}
+      @wxFIREBRICK {178, 34, 34}
+      @wxCRIMSON {220, 20, 60}
+      @wxRED {255, 0, 0}
+      @wxTOMATO {255, 99, 71}
+      @wxCORAL {255, 127, 80}
+      @wxINDIAN_RED {205, 92, 92}
+      @wxLIGHT_CORAL {240, 128, 128}
+      @wxDARK_SALMON {233, 150, 122}
+      @wxSALMON {250, 128, 114}
+      @wxLIGHT_SALMON {255, 160, 122}
+      @wxORANGE_RED {255, 69, 0}
+      @wxDARK_ORANGE {255, 140, 0}
+      @wxORANGE {255, 165, 0}
+      @wxGOLD {255, 215, 0}
+      @wxDARK_GOLDEN_ROD {184, 134, 11}
+      @wxGOLDEN_ROD {218, 165, 32}
+      @wxPALE_GOLDEN_ROD {238, 232, 170}
+      @wxDARK_KHAKI {189, 183, 107}
+      @wxKHAKI {240, 230, 140}
+      @wxOLIVE {128, 128, 0}
+      @wxYELLOW {255, 255, 0}
+      @wxYELLOW_GREEN {154, 205, 50}
+      @wxDARK_OLIVE_GREEN {85, 107, 47}
+      @wxOLIVE_DRAB {107, 142, 35}
+      @wxLAWN_GREEN {124, 252, 0}
+      @wxCHART_REUSE {127, 255, 0}
+      @wxGREEN_YELLOW {173, 255, 47}
+      @wxDARK_GREEN {0, 100, 0}
+      @wxGREEN {0, 128, 0}
+      @wxFOREST_GREEN {34, 139, 34}
+      @wxLIME {0, 255, 0}
+      @wxLIME_GREEN {50, 205, 50}
+      @wxLIGHT_GREEN {144, 238, 144}
+      @wxPALE_GREEN {152, 251, 152}
+      @wxDARK_SEA_GREEN {143, 188, 143}
+      @wxMEDIUM_SPRING_GREEN {0, 250, 154}
+      @wxSPRING_GREEN {0, 255, 127}
+      @wxSEA_GREEN {46, 139, 87}
+      @wxMEDIUM_AQUA_MARINE {102, 205, 170}
+      @wxMEDIUM_SEA_GREEN {60, 179, 113}
+      @wxLIGHT_SEA_GREEN {32, 178, 170}
+      @wxDARK_SLATE_GRAY {47, 79, 79}
+      @wxTEAL {0, 128, 128}
+      @wxDARK_CYAN {0, 139, 139}
+      @wxAQUA {0, 255, 255}
+      @wxCYAN {0, 255, 255}
+      @wxLIGHT_CYAN {224, 255, 255}
+      @wxDARK_TURQUOISE {0, 206, 209}
+      @wxTURQUOISE {64, 224, 208}
+      @wxMEDIUM_TURQUOISE {72, 209, 204}
+      @wxPALE_TURQUOISE {175, 238, 238}
+      @wxAQUA_MARINE {127, 255, 212}
+      @wxPOWDER_BLUE {176, 224, 230}
+      @wxCADET_BLUE {95, 158, 160}
+      @wxSTEEL_BLUE {70, 130, 180}
+      @wxCORN_FLOWER_BLUE {100, 149, 237}
+      @wxDEEP_SKY_BLUE {0, 191, 255}
+      @wxDODGER_BLUE {30, 144, 255}
+      @wxLIGHT_BLUE {173, 216, 230}
+      @wxSKY_BLUE {135, 206, 235}
+      @wxLIGHT_SKY_BLUE {135, 206, 250}
+      @wxMIDNIGHT_BLUE {25, 25, 112}
+      @wxNAVY {0, 0, 128}
+      @wxDARK_BLUE {0, 0, 139}
+      @wxMEDIUM_BLUE {0, 0, 205}
+      @wxBLUE {0, 0, 255}
+      @wxROYAL_BLUE {65, 105, 225}
+      @wxBLUE_VIOLET {138, 43, 226}
+      @wxINDIGO {75, 0, 130}
+      @wxDARK_SLATE_BLUE {72, 61, 139}
+      @wxSLATE_BLUE {106, 90, 205}
+      @wxMEDIUM_SLATE_BLUE {123, 104, 238}
+      @wxMEDIUM_PURPLE {147, 112, 219}
+      @wxDARK_MAGENTA {139, 0, 139}
+      @wxDARK_VIOLET {148, 0, 211}
+      @wxDARK_ORCHID {153, 50, 204}
+      @wxMEDIUM_ORCHID {186, 85, 211}
+      @wxPURPLE {128, 0, 128}
+      @wxTHISTLE {216, 191, 216}
+      @wxPLUM {221, 160, 221}
+      @wxVIOLET {238, 130, 238}
+      @wxMAGENTA {255, 0, 255}
+      @wxFUCHSIA {255, 0, 255}
+      @wxORCHID {218, 112, 214}
+      @wxMEDIUM_VIOLET_RED {199, 21, 133}
+      @wxPALE_VIOLET_RED {219, 112, 147}
+      @wxDEEP_PINK {255, 20, 147}
+      @wxHOT_PINK {255, 105, 180}
+      @wxLIGHT_PINK {255, 182, 193}
+      @wxPINK {255, 192, 203}
+      @wxANTIQUE_WHITE {250, 235, 215}
+      @wxBEIGE {245, 245, 220}
+      @wxBISQUE {255, 228, 196}
+      @wxBLANCHED_ALMOND {255, 235, 205}
+      @wxWHEAT {245, 222, 179}
+      @wxCORN_SILK {255, 248, 220}
+      @wxLEMON_CHIFFON {255, 250, 205}
+      @wxLIGHT_GOLDEN_ROD_YELLOW {250, 250, 210}
+      @wxLIGHT_YELLOW {255, 255, 224}
+      @wxSADDLE_BROWN {139, 69, 19}
+      @wxSIENNA {160, 82, 45}
+      @wxCHOCOLATE {210, 105, 30}
+      @wxPERU {205, 133, 63}
+      @wxSANDY_BROWN {244, 164, 96}
+      @wxBURLY_WOOD {222, 184, 135}
+      @wxTAN {210, 180, 140}
+      @wxROSY_BROWN {188, 143, 143}
+      @wxMOCCASIN {255, 228, 181}
+      @wxNAVAJO_WHITE {255, 222, 173}
+      @wxPEACH_PUFF {255, 218, 185}
+      @wxMISTY_ROSE {255, 228, 225}
+      @wxLAVENDER_BLUSH {255, 240, 245}
+      @wxLINEN {250, 240, 230}
+      @wxOLD_LACE {253, 245, 230}
+      @wxPAPAYA_WHIP {255, 239, 213}
+      @wxSEA_SHELL {255, 245, 238}
+      @wxMINT_CREAM {245, 255, 250}
+      @wxSLATE_GRAY {112, 128, 144}
+      @wxLIGHT_SLATE_GRAY {119, 136, 153}
+      @wxLIGHT_STEEL_BLUE {176, 196, 222}
+      @wxLAVENDER {230, 230, 250}
+      @wxFLORAL_WHITE {255, 250, 240}
+      @wxALICE_BLUE {240, 248, 255}
+      @wxGHOST_WHITE {248, 248, 255}
+      @wxHONEYDEW {240, 255, 240}
+      @wxIVORY {255, 255, 240}
+      @wxAZURE {240, 255, 255}
+      @wxSNOW {255, 250, 250}
+      @wxBLACK {0, 0, 0}
+      @wxDIM_GRAY {105, 105, 105}
+      @wxDIM_GREY {105, 105, 105}
+      @wxGRAY {128, 128, 128}
+      @wxGREY {128, 128, 128}
+      @wxDARK_GRAY {169, 169, 169}
+      @wxDARK_GREY {169, 169, 169}
+      @wxSILVER {192, 192, 192}
+      @wxLIGHT_GRAY {211, 211, 211}
+      @wxLIGHT_GREY {211, 211, 211}
+      @wxGAINSBORO {220, 220, 220}
+      @wxWHITE_SMOKE {245, 245, 245}
+      @wxWHITE {255, 255, 255}
 
       @wxBK_RIGHT 128
       @wxBK_LEFT 64
@@ -1772,9 +1850,9 @@ defmodule WxDefines do
       @wxTE_PASSWORD 2048
       @wxTE_PROCESS_ENTER 1024
       @wxTE_RICH 128
+      # ERROR             @wxTE_CENTRE  ?wxTE_CENTER
       @wxTE_RIGHT 512
       @wxTE_CENTER 256
-      @wxTE_CENTRE 256
       @wxTE_LEFT 0
       @wxTE_PROCESS_TAB 64
       @wxTE_MULTILINE 32
