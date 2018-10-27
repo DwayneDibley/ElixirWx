@@ -9,8 +9,7 @@ defmodule WxFunctions do
 
   @doc """
   Finction called to close and destroy the current window. This may be called from
-  an event callback, so we must send the WindowExit event to the __main__thread__
-  PID.
+  an event callback.
   """
   def closeWindow(windowName) do
     Logger.debug("closeWindow(#{inspect(windowName)})")
@@ -25,9 +24,7 @@ defmodule WxFunctions do
         :wxWindow.destroy(frame)
     end
 
-    {_, _, mainThread} = WinInfo.get_by_name(:__main_thread__)
-
-    send(mainThread, {WindowExit, windowName})
+    send(self(), {WindowExit, windowName})
   end
 
   # ------------------------------------------------------------------------------------
@@ -70,18 +67,9 @@ defmodule WxFunctions do
           :unknown_event
       end
 
-    # fx = Map.get(windowData, event, nil)
-
-    # fx.(event, {xrefData[id], eventSource}, {windowData, xrefData})
-    # Logger.error("111")
-
-    # Logger.error("222")
     {eventType, _idx, callBack} = WinInfo.get_by_name(event)
     {senderName, _senderId, senderObj} = WinInfo.get_by_id(id)
-    # ret = WinInfo.get_by_id(id)
-    # Logger.error("lookup id = #{inspect(ret)}")
-    # callBack(event, eventSource, windowData)
-    # callBack.(eventType, {senderName, senderObj}, windowData)
+
     try do
       callBack.(windowData, eventType, senderName, senderObj)
     rescue
@@ -94,14 +82,13 @@ defmodule WxFunctions do
   # the event specification
   def getEvent(timeout \\ 0) do
     receive do
-      # {:wx, senderId, senderObj, winInfo, {group, event, [], 0, 0}}
-      {:wx, senderId, senderObj, winInfo, {_group, event, _, _, _}} ->
+      {:wx, senderId, senderObj, _winInfo, {_group, event, _, _, _}} ->
         Logger.debug("Event Message: #{inspect(senderId)}, #{inspect(senderObj)}}")
         Logger.debug("  Event: #{inspect(event)}")
 
         {_eventType, _senderId, _callback} = WinInfo.get_by_id(senderId)
 
-      {:wx, senderId, senderObj, winInfo, {group, event}} ->
+      {:wx, senderId, senderObj, _winInfo, {group, event}} ->
         Logger.debug("Event Message: #{inspect(senderId)}, #{inspect(senderObj)}}")
         Logger.debug("  Event: #{inspect(event)}")
 
@@ -133,4 +120,9 @@ defmodule WxFunctions do
       {_, _, :wxStaticText, _} -> :wxStaticText.setLabel(ctrl, text)
     end
   end
+
+  @doc """
+  Find the application directory. This is expected to be the directory
+  containing the last lib directory in the path.
+  """
 end
