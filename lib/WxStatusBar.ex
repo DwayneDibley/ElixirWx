@@ -3,6 +3,17 @@ defmodule WxStatusBar do
   import WinInfo
   require Logger
 
+  @moduledoc """
+  A status bar is a narrow window that can be placed along the bottom of a frame
+  to show small amounts of status information.
+
+  A status bar can contain one or more fields, one or more of which can be
+  variable length according to the size of the window.
+
+  The status bar also maintains an independent stack of status texts for each field
+  (see pushStatusText() and popStatusText()).
+  """
+
   @doc """
   Create a new status bar and attach it to the main frame.
   If a :text option is supplied, set the text.
@@ -36,43 +47,41 @@ defmodule WxStatusBar do
   If it is a list of strings, then set all fields, setting the number of fields
   to the length of the supplied list
   """
-  # def setText(text) when is_binary(text) do
-  #  {_, _, sb} = WinInfo.get_by_name(:status_bar)
-  #  :wxStatusBar.setStatusText(sb, text)
-  # end
+  def setText(text) when is_binary(text) do
+    {_, _, sb} = WinInfo.get_by_name(:status_bar)
+    :wxStatusBar.setStatusText(sb, text)
+  end
 
-  # Set the text of the status bar field. THe number of fields is extended if necessary.
-  def setText(text, index \\ 1) when is_binary(text) do
+  def setText(textList) when is_list(textList) do
     {_, _, sb} = WinInfo.get_by_name(:status_bar)
 
-    case index do
-      1 ->
-        :wxStatusBar.setStatusText(sb, text)
+    setFieldCount(sb, length(textList))
+    setStatusText(sb, textList, 0)
+  end
 
-      _ ->
-        n = :wxStatusBar.getFieldsCount(sb)
+  def setText(text, index) when is_binary(text) do
+    {_, _, sb} = WinInfo.get_by_name(:status_bar)
+    setFieldCount(sb, index + 1)
+    :wxStatusBar.setStatusText(sb, text, [{:number, index}])
+  end
 
-        cond do
-          n < index ->
-            :wxStatusBar.setFieldsCount(sb, length(index))
-            :wxStatusBar.setStatusText(sb, text, [{:number, index}])
+  defp setFieldCount(sb, count) do
+    n = :wxStatusBar.getFieldsCount(sb)
 
-          n >= index ->
-            :wxStatusBar.setStatusText(sb, text, [{:number, index}])
-        end
+    cond do
+      n < count ->
+        :wxStatusBar.setFieldsCount(sb, count)
+        n
+
+      n >= count ->
+        n
     end
   end
 
-  def setText(text) when is_list(text) do
-    {_, _, sb} = WinInfo.get_by_name(:status_bar)
-    :wxStatusBar.setFieldsCount(sb, length(text))
-    setTextList(sb, text, 0)
-  end
+  defp setStatusText(_, [], _), do: :ok
 
-  def setTextList(_, [], _), do: :ok
-
-  def setTextList(sb, [h | t], n) do
+  defp setStatusText(sb, [h | t], n) do
     :wxStatusBar.setStatusText(sb, h, [{:number, n}])
-    setTextList(sb, t, n + 1)
+    setStatusText(sb, t, n + 1)
   end
 end
