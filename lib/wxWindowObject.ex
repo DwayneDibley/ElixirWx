@@ -21,15 +21,15 @@ defmodule WxWinObj do
     start_link(MyWindow, MyWindowEvents, show: true, name: MyWindow)
     ```
   """
-  def start_link(window_spec, evt_handler, options \\ []) when is_atom(window_spec) do
-    GenServer.start_link(__MODULE__, {self(), window_spec, evt_handler, options})
+  def start_link(windowSpec, windowLogic, options \\ []) when is_atom(windowSpec) do
+    GenServer.start_link(__MODULE__, {self(), windowSpec, windowLogic, options})
   end
 
   @doc """
   See start_link()
   """
-  def start(window_spec, evt_handler, options \\ []) when is_atom(window_spec) do
-    GenServer.start_link(__MODULE__, {self(), window_spec, evt_handler, options})
+  def start(windowSpec, windowLogic, options \\ []) when is_atom(windowSpec) do
+    GenServer.start_link(__MODULE__, {self(), windowSpec, windowLogic, options})
   end
 
   @doc """
@@ -93,79 +93,126 @@ defmodule WxWinObj do
 
   ## Server Callbacks ----------------------------------------------------------
   @impl true
-  def init({parent, window_spec, evt_handler, options}) do
+  def init({parent, windowSpec, windowLogic, options}) do
+    Process.monitor(parent)
+
+    Logger.debug("Window Logic = #{inspect(windowLogic)}")
+
     name =
       case options[:name] do
-        nil -> window_spec
-        name -> name
+        nil ->
+          windowSpec
+
+        name ->
+          Process.register(self(), name)
+          name
       end
 
     # Check that the window definition file exists
-    window_spec =
-      case Code.ensure_loaded(window_spec) do
+    windowSpec =
+      case Code.ensure_loaded(windowSpec) do
         {:error, :nofile} ->
-          Logger.error("No such window specification: #{inspect(window_spec)}")
+          Logger.error("No such window specification: #{inspect(windowSpec)}")
           nil
 
         # {:stop, "No such module: #{inspect(window)}"}
         {:module, _} ->
-          window_spec
+          windowSpec
       end
 
-    # Check that the evt_handler definition file exists. It may be null
+    # Check that the windowLogic definition file exists. It may be null
     # if we dont want to handle any events.
-    {evt_handler, handler_fns} =
-      case evt_handler do
+    {windowLogic, logic_fns} =
+      case windowLogic do
         nil ->
           {nil, []}
 
         _ ->
-          case Code.ensure_loaded(evt_handler) do
+          case Code.ensure_loaded(windowLogic) do
             {:error, :nofile} ->
-              Logger.warn("Event handler: No such module: #{inspect(evt_handler)}")
+              Logger.error("Window Logic: No such module: #{inspect(windowLogic)}")
               {nil, []}
 
             {:module, _} ->
-              {evt_handler, evt_handler.module_info(:exports)}
+              {windowLogic, windowLogic.module_info(:exports)}
           end
       end
 
-    case {window_spec, evt_handler, handler_fns} do
-      {nil, _, _} ->
-        {:stop, "No such module: #{inspect(window_spec)}"}
+    {action, state} =
+      case {windowSpec, windowLogic, logic_fns} do
+        {nil, _, _} ->
+          {:stop, "No such module: #{inspect(windowSpec)}"}
 
-      {window_spec, nil, _} ->
-        win = window_spec.createWindow(show: options[:show])
+        {windowSpec, nil, _} ->
+          win = windowSpec.createWindow(show: options[:show])
 
-        {:ok,
-         [
-           parent: parent,
-           winName: name,
-           winInfo: win,
-           window: window_spec,
-           handler: nil,
-           handler_fns: []
-         ]}
+          {:ok,
+           [
+             parent: parent,
+             winName: name,
+             winInfo: win,
+             window: windowSpec,
+             logic: nil,
+             logic_fns: []
+           ]}
 
-      {window_spec, evt_handler, handler_fns} ->
-        win = window_spec.createWindow(show: options[:show])
+        {windowSpec, windowLogic, logic_fns} ->
+          win = windowSpec.createWindow(show: options[:show])
 
-        {:ok,
-         [
-           parent: parent,
-           winName: name,
-           winInfo: win,
-           window: window_spec,
-           handler: evt_handler,
-           handler_fns: handler_fns
-         ]}
+          {:ok,
+           [
+             parent: parent,
+             winName: name,
+             winInfo: win,
+             window: windowSpec,
+             logic: windowLogic,
+             logic_fns: logic_fns
+           ]}
+      end
+
+    # Logger.debug("State = #{inspect(state)}")
+
+    # If there is an init() function in the logic module, call it. The init function
+    # may change the action or state.
+    {action, state, timeout} =
+      case state[:logic_fns][:init] do
+        nil ->
+          Logger.info("#{inspect(state[:winName])} - no initialisation in logic}")
+
+        0 ->
+          # Code.eval_string("#{state[:logic]}.#{:init}()")
+          case apply(state[:logic], :init, []) do
+            {action, state, timeout} -> {action, state, timeout}
+            {action, state} -> {action, state, nil}
+            _ -> {action, state, nil}
+          end
+
+        1 ->
+          # Code.eval_string("#{state[:logic]}.#{:init}()")
+          case apply(state[:logic], :init, [{action, state}]) do
+            {action, state, timeout} -> {action, state, timeout}
+            {action, state} -> {action, state, nil}
+            _ -> {action, state, nil}
+          end
+
+        # {action, state, timeout} = apply(state[:logic], init, [{action, state}])
+
+        _ ->
+          Logger.error("#{inspect(state[:winName])} - Window logic init takes no arguments")
+      end
+
+    case timeout do
+      nil -> {action, state}
+      _ -> {action, state, timeout}
     end
+
+    # {action, state}
   end
 
   # Call interface ----
   @impl true
-  def handle_call({:get, {obj, attr}}, from, state) do
-    #attr = WxAttributes.getAttr(obj, attr)
+  def handle_call({:get, {_obj, attr}}, _from, state) do
+    # attr = WxAttributes.getAttr(obj, attr)
     {:reply, attr, state}
   end
 
@@ -176,16 +223,16 @@ defmodule WxWinObj do
   end
 
   @impl true
-  def handle_cast({:show, how}, state) do
+  def handle_cast({:show, _how}, state) do
     Logger.info("Show!!")
-    {_, _, frame} = WinInfo.get_by_name(:__main_frame__)
+    frame = WinInfo.getWxObject(:__main_frame__)
     :wxFrame.show(frame)
     {:noreply, state}
   end
 
-@impl true
-  def handle_cast({:set, {obj, attr, val}}, state) do
-    #WxAttributes.setAttr(obj, attr, val)
+  @impl true
+  def handle_cast({:set, {_obj, _attr, _val}}, state) do
+    # WxAttributes.setAttr(obj, attr, val)
     {:noreply, state}
   end
 
@@ -200,16 +247,31 @@ defmodule WxWinObj do
   # Gen_server callbacks ---------------------------------------------------------
   @impl true
   def terminate(reason, msg) do
-    Logger.info("terminate: #{inspect(reason)}, #{inspect(msg)}")
+    Logger.debug("terminate: #{inspect(reason)}, #{inspect(msg)}")
+  end
+
+  @impl true
+  def handle_info(:timeout, state) do
+    case handlerExists(state, :do_timeout, 1) do
+      true ->
+        apply(state[:logic], :do_timeout, [state])
+
+      false ->
+        Logger.warn("No handler for handle_info(:timeout)")
+        {:noreply, state}
+    end
+  end
+
+  def handle_info({:wx, _, _, _, _} = evt, state) do
+    WxWinObjEvt.handleWxEvent(evt, state)
   end
 
   # Handle Info
-  def handle_info({_, _, sender, _, {:wxClose, :close_window}}, state) do
-
+  def handle_info({_, _, _sender, _, {:wxClose, :close_window}}, state) do
     send(state[:parent], {state[:winName], :child_window_closed, "Close window event"})
 
     # WxFunctions.closeWindow(state[:window])
-    {_, _, frame} = WinInfo.get_by_name(:__main_frame__)
+    frame = WinInfo.getWxObject(:__main_frame__)
     :wxEvtHandler.disconnect(frame)
     :wxWindow.destroy(frame)
     {:stop, :normal, "#{inspect(state[:winName])} - Close window event"}
@@ -217,11 +279,29 @@ defmodule WxWinObj do
 
   # Menu event
   def handle_info(
-        {_, sender, _, _, {:wxCommand, :command_menu_selected, _, _, _}},
+        {_a, sender, _b, _c, {:wxCommand, :command_menu_selected, _d, _e, _f}},
         state
       ) do
-    invokeEventHandler(:do_menu_click, sender, state)
-    {:noreply, state}
+    # Logger.debug(
+    #   "Handle info: #{
+    #     inspect({_a, sender, _b, _c, {:wxCommand, :command_menu_selected, _d, _e, _f}})
+    #   }"
+    # )
+
+    ret =
+      case handlerExists(state, :do_menu_click, 2) do
+        true ->
+          Logger.debug("handle_info command_menu_selected - get_by_id()")
+
+          {name, _id, _obj} = WinInfo.get_by_id(sender)
+          apply(state[:logic], :do_menu_click, [name, state])
+
+        false ->
+          Logger.warn("No handler for handle_info(:do_menu_click)")
+          {:noreply, state}
+      end
+
+    ret
   end
 
   # Menu event
@@ -229,17 +309,70 @@ defmodule WxWinObj do
         {_, sender, _, _, {:wxCommand, :command_button_clicked, _, _, _}},
         state
       ) do
-    invokeEventHandler(:do_button_click, sender, state)
-    {:noreply, state}
+    case handlerExists(state, :do_button_click, 2) do
+      true ->
+        apply(state[:logic], :do_button_click, [sender, state])
+
+      false ->
+        Logger.warn("No handler for handle_info(:do_button_click)")
+        {:noreply, state}
+    end
+  end
+
+  # List Ctrl Click
+  # {:wxList, :command_list_col_click, -1, -1, -1, 0, {51, -9}}}
+  def handle_info(
+        {_, sender, _, _, {:wxListx, :command_list_col_click, _, _, _, col, _}},
+        state
+      ) do
+    case handlerExists(state, :do_command_list_col_click, 3) do
+      true ->
+        apply(state[:logic], :do_command_list_col_click, [sender, col, state])
+
+      false ->
+        Logger.warn("No handler for handle_info(:do_command_list_col_click)")
+        {:noreply, state}
+    end
   end
 
   # Child window closed event received
   def handle_info(
-        {window, :child_window_closed, reason},
+        {window, :child_window_closed, _reason},
         state
       ) do
-    invokeEventHandler(:do_child_window_closed, window, state)
-    {:noreply, state}
+    case handlerExists(state, :do_child_window_closed, 2) do
+      true ->
+        apply(state[:logic], :do_child_window_closed, [window, state])
+
+      false ->
+        Logger.warn("No handler for handle_info(:do_child_window_closed)")
+        {:noreply, state}
+    end
+  end
+
+  # Child window closed event received
+  def handle_info(
+        {:DOWN, _, :process, pid, how},
+        state
+      ) do
+    parent = state[:parent]
+
+    case pid == parent do
+      true -> Logger.info("Parent window exited: #{inspect(how)}")
+      false -> Logger.info("Window exit event caught: #{inspect(pid)}")
+    end
+
+    case handlerExists(state, :do_parent_window_closed, 2) do
+      true ->
+        apply(state[:logic], :do_parent_window_closed, [pid, state])
+
+      false ->
+        Logger.warn("No handler for handle_info(:do_parent_window_closed)")
+        {:noreply, state}
+    end
+
+    invokeEventHandler(:do_parent_window_closed, pid, state)
+    {:stop, :normal, "Parent died"}
   end
 
   @impl true
@@ -252,7 +385,7 @@ defmodule WxWinObj do
   defp invokeEventHandler(:child_window_closed, sender, state) do
     event = :child_window_closed
 
-    case state[:handler_fns][event] do
+    case state[:logic_fns][event] do
       nil ->
         Logger.info(
           "#{inspect(state[:winName])} - unhandled #{inspect(event)} event from #{
@@ -261,14 +394,19 @@ defmodule WxWinObj do
         )
 
       1 ->
-        Code.eval_string("#{state[:handler]}.#{event}(#{inspect(sender)})")
+        Code.eval_string("#{state[:logic]}.#{event}(#{inspect(sender)})")
+
+      2 ->
+        Logger.info("Eval: \"#{state[:logic]}.#{event}(#{inspect(sender)}, #{inspect(state)})\"")
+        Code.eval_string("#{state[:logic]}.#{event}(#{inspect(sender)}, #{inspect(state)})")
     end
   end
 
   defp invokeEventHandler(event, sender, state) do
     {name, _id, _obj} = WinInfo.get_by_id(sender)
+    Logger.error("invokeEventHandler - get_by_id()")
 
-    case state[:handler_fns][event] do
+    case state[:logic_fns][event] do
       nil ->
         Logger.info(
           "#{inspect(state[:winName])} - unhandled #{event} event: #{inspect(inspect(name))}"
@@ -276,7 +414,27 @@ defmodule WxWinObj do
 
       #      1 -> state[:handler].event.(sender)
       1 ->
-        Code.eval_string("#{state[:handler]}.#{event}(#{inspect(name)})")
+        # Code.eval_string("#{state[:logic]}.#{event}(#{inspect(name)})")
+        apply(state[:logic], event, [name])
+
+      2 ->
+        Logger.info("Eval2: \"#{state[:logic]}.#{event}(#{inspect(sender)}, #{inspect(state)})\"")
+        Logger.info("State = #{inspect(state)}")
+        apply(state[:logic], event, [name, state])
+    end
+  end
+
+  # Check to see if a function of the correct arity exists in the logic module
+  defp handlerExists(state, handler, arity) do
+    case state[:logic_fns][handler] do
+      nil ->
+        false
+
+      handlerArity ->
+        cond do
+          handlerArity != arity -> false
+          true -> true
+        end
     end
   end
 end

@@ -46,26 +46,27 @@ defmodule WxFunctions do
   #   end
   # end
 
-  # @doc """
-  # Finction called to close and destroy the current window. This may be called from
-  # an event callback.
-  # """
-  # def closeWindow(windowName) do
-  #   Logger.debug("closeWindow(#{inspect(windowName)})")
-  #   {_, _, frame} = WinInfo.get_by_name(:__main_frame__)
-  #
-  #   case frame do
-  #     nil ->
-  #       Logger.error("No __main_frame__!!")
-  #
-  #     _ ->
-  #       :wxEvtHandler.disconnect(frame)
-  #       :wxWindow.destroy(frame)
-  #   end
-  #
-  #   send(self(), {WindowExit, windowName})
-  # end
-  #
+  @doc """
+  Finction called to close and destroy the current window. This may be called from
+  an event callback.
+  """
+  def closeWindow(windowName) do
+    Logger.debug("closeWindow(#{inspect(windowName)})")
+    # {_, _, frame, _} = WinInfo.getWxObject(:__main_frame__)
+    frame = WinInfo.getWxObject(:__main_frame__)
+
+    case frame do
+      nil ->
+        Logger.error("No __main_frame__!!")
+
+      _ ->
+        :wxEvtHandler.disconnect(frame)
+        :wxWindow.destroy(frame)
+    end
+
+    send(self(), {WindowExit, windowName})
+  end
+
   # ------------------------------------------------------------------------------------
   def setFrameIcon(frame, iconFile) do
     # :wxFrame.setIcon(frame, iconFile)
@@ -106,7 +107,7 @@ defmodule WxFunctions do
           :unknown_event
       end
 
-    {eventType, _idx, callBack} = WinInfo.get_by_name(event)
+    {eventType, _idx, callBack} = WinInfo.getWxObject(event)
     {senderName, _senderId, senderObj} = WinInfo.get_by_id(id)
 
     try do
@@ -124,6 +125,7 @@ defmodule WxFunctions do
       {:wx, senderId, senderObj, _winInfo, {_group, event, _, _, _}} ->
         Logger.debug("Event Message: #{inspect(senderId)}, #{inspect(senderObj)}}")
         Logger.debug("  Event: #{inspect(event)}")
+        Logger.error("getEvent - get_bt_id()")
 
         {_eventType, _senderId, _callback} = WinInfo.get_by_id(senderId)
 
@@ -131,6 +133,7 @@ defmodule WxFunctions do
         Logger.debug("Event Message: #{inspect(senderId)}, #{inspect(senderObj)}}")
         Logger.debug("  Event: #{inspect(event)}")
 
+        Logger.error("getEvent - get_by_id()")
         {_eventType, senderId, _callback} = WinInfo.get_by_id(senderId)
         {senderId, event, group}
 
@@ -158,5 +161,9 @@ defmodule WxFunctions do
     case ctrl do
       {_, _, :wxStaticText, _} -> :wxStaticText.setLabel(ctrl, text)
     end
+  end
+
+  def closeWindow(_window) do
+    Logger.warn("closeWindow/1 not implemented")
   end
 end

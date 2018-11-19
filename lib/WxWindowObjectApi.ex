@@ -20,12 +20,10 @@ defmodule WxWinObj.API do
     start_link(MyWindow, MyWindowEvents, show: true, name: MyWindow)
     ```
   """
-  def newWindow(windowSpec, eventHandler, options \\ []) do
-    Logger.debug(
-      "newWindow(#{inspect(windowSpec)}, #{inspect(eventHandler)},#{inspect(options)})"
-    )
+  def newWindow(windowSpec, windowLogic, options \\ []) do
+    Logger.debug("newWindow(#{inspect(windowSpec)}, #{inspect(windowLogic)},#{inspect(options)})")
 
-    case WxWinObj.start_link(windowSpec, eventHandler, options) do
+    case WxWinObj.start_link(windowSpec, windowLogic, options) do
       {:ok, window} ->
         window
 
@@ -72,8 +70,10 @@ defmodule WxWinObj.API do
     Logger.debug("closeWindow(#{inspect(window)})")
 
     case checkPid(window) do
-      {:error, reason} -> {:error, reason}
-      window -> WxWinObj.close(window)
+      {:error, reason} ->
+        {:error, reason}
+        # window -> WxWinObj.close(window)
+        Logger.warn("closeWindow not yet implemented")
     end
   end
 
@@ -96,20 +96,34 @@ defmodule WxWinObj.API do
       -1 ->
         receive do
           {windowName, :child_window_closed, reason} ->
-            Logger.info("Msg received: :child_window_closed window = #{inspect(windowName)}, waitWindow = #{inspect(waitWindow)}")
+            Logger.debug(
+              "Msg received: :child_window_closed window = #{inspect(windowName)}, waitWindow = #{
+                inspect(waitWindow)
+              }"
+            )
+
             cond do
               windowName == waitWindow -> {windowName, :window_closed, reason}
               true -> waitForWindowClose(waitWindow, timeout)
             end
 
-          msg -> Logger.info("Msg received: #{inspect(msg)}")
+          {:EXIT, pid, :normal} ->
+            Logger.debug("EXIT received: #{inspect({:EXIT, pid, :normal})}")
+
+          msg ->
+            Logger.info("Msg received: #{inspect(msg)}")
             waitForWindowClose(waitWindow, timeout)
         end
 
       timeout ->
         receive do
           {windowName, :child_window_closed, reason} ->
-            Logger.info("Msg received: :child_window_closed window = #{inspect(windowName)}, waitWindow = #{inspect(waitWindow)}")
+            Logger.info(
+              "Msg received: :child_window_closed window = #{inspect(windowName)}, waitWindow = #{
+                inspect(waitWindow)
+              }"
+            )
+
             cond do
               windowName == waitWindow -> {windowName, :window_closed, reason}
               true -> waitForWindowClose(waitWindow, timeout)
@@ -131,5 +145,9 @@ defmodule WxWinObj.API do
 
   defp checkPid(_window) do
     {:error, "Window identifier must be an atom or a PID"}
+  end
+
+  def close(_window) do
+    Logger.warn("close/1 not implemented")
   end
 end

@@ -10,7 +10,7 @@ defmodule WxTopLevelWindow do
   end
 
   defp setWindowIcon(iconFile) do
-    {_, _, frame} = WinInfo.get_by_name(:__main_frame__)
+    frame = WinInfo.getWxObject(:__main_frame__)
 
     {:ok, cwd} = File.cwd()
     file = Path.join(cwd, iconFile)

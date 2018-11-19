@@ -48,10 +48,11 @@ defmodule WxLayout do
     new_val
   end
 
-  def getLayout(name) do
-    Logger.info("getLayout(#{inspect(name)})")
-    {name, size, layout} = WinInfo.get_by_name(name)
-    Logger.info("getLayout(#{inspect(name)}) => #{inspect({name, size, layout})}")
-    layout
+  def getLayout(_name) do
+    Logger.error("getLayout() is not implemented")
+    # Logger.info("getLayout(#{inspect(name)})")
+    # {name, size, layout} = WinInfo.get_by_name(name)
+    # Logger.info("getLayout(#{inspect(name)}) => #{inspect({name, size, layout})}")
+    # layout
   end
 end

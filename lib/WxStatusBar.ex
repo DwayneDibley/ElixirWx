@@ -1,6 +1,6 @@
 defmodule WxStatusBar do
   import WxUtilities
-  import WinInfo
+  # import WinInfo
   require Logger
 
   @moduledoc """
@@ -27,7 +27,7 @@ defmodule WxStatusBar do
     Logger.debug("  :wxFrame.createStatusBar(#{inspect(parent)}, #{inspect(options)}")
     sb = :wxFrame.createStatusBar(parent, options)
 
-    put_table({id, new_id, sb})
+    WinInfo.insertCtrl(id, sb)
 
     defaults = [text: nil]
     {_, options, _restOpts} = getOptions(restOpts, defaults)
@@ -48,19 +48,19 @@ defmodule WxStatusBar do
   to the length of the supplied list
   """
   def setText(text) when is_binary(text) do
-    {_, _, sb} = WinInfo.get_by_name(:status_bar)
+    sb = WinInfo.getWxObject(:status_bar)
     :wxStatusBar.setStatusText(sb, text)
   end
 
   def setText(textList) when is_list(textList) do
-    {_, _, sb} = WinInfo.get_by_name(:status_bar)
+    sb = WinInfo.getWxObject(:status_bar)
 
     setFieldCount(sb, length(textList))
     setStatusText(sb, textList, 0)
   end
 
   def setText(text, index) when is_binary(text) do
-    {_, _, sb} = WinInfo.get_by_name(:status_bar)
+    sb = WinInfo.getWxObject(:status_bar)
     setFieldCount(sb, index + 1)
     :wxStatusBar.setStatusText(sb, text, [{:number, index}])
   end
