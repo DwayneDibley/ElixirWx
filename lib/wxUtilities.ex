@@ -20,11 +20,9 @@ defmodule WxUtilities do
     {new_id, new_opts} =
       case List.keytake(opts, :id, 0) do
         {{:id, id}, opts} -> {id, opts}
-        nil -> {:_no_id_, opts}
+        nil -> {nil, opts}
       end
 
-    # {{:id, id}, opts} = List.keytake(opts, :id, 0)
-    # Logger.info("ID=#{inspect(id)}")
     {new_id, new_opts, options}
   end
 
@@ -66,7 +64,7 @@ defmodule WxUtilities do
     {id, rest} =
       case List.keytake(rest, :id, 0) do
         {{:id, id}, rest} -> {id, rest}
-        nil -> {:_no_id_, rest}
+        nil -> {nil, rest}
       end
 
     # Get and remove the :layout from the options list

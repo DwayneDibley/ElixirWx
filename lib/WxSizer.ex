@@ -1,6 +1,9 @@
 defmodule WxSizer do
   require Logger
 
+  @doc """
+
+  """
   def addToSizer(obj, sizer, options) do
     defaults = [layout: []]
     {_, [layout: options], _} = WxUtilities.getOptions(options, defaults)
@@ -20,6 +23,9 @@ defmodule WxSizer do
     end
   end
 
+  @doc """
+
+  """
   def add(obj, sizer, options) do
     defaults = [layout: []]
     {_, [layout: layoutOptions], _} = WxUtilities.getOptions(options, defaults)

@@ -178,6 +178,7 @@ defmodule WxWinObj do
       case state[:logic_fns][:init] do
         nil ->
           Logger.info("#{inspect(state[:winName])} - no initialisation in logic}")
+          {action, state, nil}
 
         0 ->
           # Code.eval_string("#{state[:logic]}.#{:init}()")

@@ -50,56 +50,50 @@ defmodule WxDsl do
       )
 
       # Get the function attributes
-      opts = get_opts_map(unquote(attributes))
+      defaults = [show: false, icon: nil]
+      {id, opts, errs} = getOptions(unquote(attributes), defaults)
 
       # Create the window storage
       WinInfo.createInfoTable()
 
       # Create a new wxObject for the window
       wx = :wx.new()
+      debug(0, ":window = :wx.new()")
 
       # put_info( :window, wx)
-      WinInfo.insertCtrl(:window, wx)
+      WinInfo.insertObject(:window, wx)
 
       # execute the function body
-      stack_push({wx, nil, nil})
-      unquote(block)
+      stack_push({wx, wx, nil, 2})
+      child = unquote(block)
       stack_pop()
 
-      # if show: true, show the window
-      show = Map.get(opts, :show, true)
-      focus = Map.get(opts, :setFocus, false)
-      parent = Map.get(opts, :parent, nil)
+      case {opts[:show], child} do
+        {_, nil} ->
+          error(0, ":wxWindow.show: No __main__frame__")
 
-      frame = WinInfo.getWxObject(:__main_frame__)
+        {true, {:wx_ref, _, :wxFrame, []}} ->
+          debug(0, ":wxWindow.show(#{inspect(getObjectId(child))}")
+          :wxFrame.show(child)
 
-      case show do
-        [show: true] ->
-          Logger.debug("  :wxWindow.show(#{inspect(frame)}")
-          :wxFrame.show(frame)
+        {false, {:wx_ref, _, :wxFrame, []}} ->
+          warn(0, ":wxWindow.show: show was false")
 
-        [show: false] ->
-          Logger.error("  :wxWindow. show was false")
-          nil
+        {show, child} ->
+          error(
+            0,
+            ":wxWindow.show: Child must be a frame, was: {#{inspect(show)},#{inspect(child)}"
+          )
       end
 
-      # case focus do
-      #  true -> :wxWindow.setFocus(frame)
-      #  false -> nil
-      # end
-
       Logger.debug("mainWindow -----------------------------------------------------")
-      display_table()
       Logger.debug("")
+      display_table()
 
-      WxTopLevelWindow.setIcon(Map.get(opts, :icon, nil))
-
-      # case parent do
-      #  nil -> nil
-      #  parent -> send(parent, {:window_open, __ENV__.module, self()})
+      # case opts[:icon] do
+      #   nil -> nil
+      #   icon -> WxTopLevelWindow.setIcon(icon)
       # end
-
-      # table_name()
     end
   end
 
@@ -119,7 +113,7 @@ defmodule WxDsl do
     quote do
       Logger.debug("bgColour +++++++++++++++++++++++++++++++++++++++++++++++++++++")
 
-      {container, parent, sizer} = stack_tos()
+      {container, parent, sizer, indent} = stack_tos()
       Logger.debug("  tos = {#{inspect(parent)}, #{inspect(container)}, #{inspect(sizer)}}")
 
       :wxWindow.setBackgroundColour(parent, unquote(colour))
@@ -131,7 +125,7 @@ defmodule WxDsl do
     quote do
       Logger.debug("border/1 +++++++++++++++++++++++++++++++++++++++++++++++++++++")
 
-      {container, parent, sizer} = stack_tos()
+      {container, parent, sizer, indent} = stack_tos()
       Logger.debug("  tos = #{inspect(container)}, #{inspect(parent)}, #{inspect(sizer)}}")
 
       defaults = [size: 1, flags: @wxALL]
@@ -151,7 +145,7 @@ defmodule WxDsl do
     quote do
       Logger.debug("Spacer/1 +++++++++++++++++++++++++++++++++++++++++++++++++++++")
 
-      {container, parent, sizer} = stack_tos()
+      {container, parent, sizer, indent} = stack_tos()
       Logger.debug("  tos = {#{inspect(parent)}, #{inspect(container)}, #{inspect(sizer)}}")
 
       defaults = [space: nil, size: nil, layout: []]
@@ -194,56 +188,100 @@ defmodule WxDsl do
   end
 
   @doc """
-  Create a new box sizer.
+  A wxBoxSizer can lay out its children either vertically or horizontally, depending
+  on what flag is being used in its constructor.
+
+  When using a vertical sizer, each child can be centered, aligned to the right
+  or aligned to the left.
+
+  Correspondingly, when using a horizontal sizer, each child can be centered,
+  aligned at the bottom or aligned at the top.
+
+  The stretch factor is used for the main orientation, i.e. when using a
+  horizontal box sizer, the stretch factor determines how much the child can be
+  stretched horizontally.
+
+  | option      | Description                                             | Value     | Default   |
+  | ----------- | ------------------------------------------------------- | --------- | --------- |
+  | id          | The name by which the box sizer will be referred to.    | atom()    | none      |
+  | :orient     | Orientation: @wxVERTICAL or @wxHORIZONTAL               | integer() |@wxVERTICAL|
+  | :proportion | The proportion that the enclosed object will be resized | integer() | 1         |
+  |             | (stretched) when the enclosing control is resized.      |           |           |
+  |             | 0 - No resizing                                         |           |           |
+  |             | 1 - In proportion                                       |           |           |
+  |             | n - 1:n                                                 |           |           |
+  | :flag       | @wxEXPAND: Make stretchable                             | integer() | @wxEXPAND |
+  |             | @wxALL:    Make a border all around                     |           |           |
+  | :border     | Width of the border                                     | integer() | 0         |
+  Example:
+
+  ```
+  wxBoxSizer(
+    id: :txt1sizer,
+    orient: @wxVERTICAL,
+    proportion: 1,
+    flag: @wxEXPAND,
+    border: 0
+  ) do
+
+  ...
+
+  end
+
+
   """
-  defmacro boxSizer(attributes, do: block) do
+  defmacro wxBoxSizer(attributes, do: block) do
     quote do
-      Logger.debug("Box Sizer ++++++++++++++++++++++++++++++++++++++++++++++++++")
-      {container, parent, sizer} = stack_tos()
-      Logger.debug("   tos = #{inspect(container)}, #{inspect(parent)}, #{inspect(sizer)}}")
+      # Logger.debug("Box Sizer ++++++++++++++++++++++++++++++++++++++++++++++++++")
+      {container, parent, sizer, indent} = stack_tos()
 
-      opts = get_opts_map(unquote(attributes))
+      # Get the function attributes
+      defaults = [id: nil, orient: @wxHORIZONTAL, proportion: 1, flag: @wxEXPAND, border: 0]
+      {id, opts, errs} = getOptions(unquote(attributes), defaults)
 
-      Logger.debug("  opts = #{inspect(opts)}")
-      bs = :wxBoxSizer.new(Map.get(opts, :orient, @wxHORIZONTAL))
+      bs = :wxBoxSizer.new(opts[:orient])
+      WinInfo.insertObject(id, bs, parent)
 
-      Logger.debug(
-        "  :wxBoxSizer.new(#{inspect(Map.get(opts, :orient, @wxHORIZONTAL))}) => #{inspect(bs)}"
-      )
+      debug(indent, "#{inspect(getObjectId(bs))} = :wxBoxSizer.new(#{inspect(opts[:orient])})")
 
-      stack_push({container, parent, bs})
-      unquote(block)
+      stack_push({container, parent, bs, indent + 2})
+      child = unquote(block)
       stack_pop()
 
-      case sizer do
-        {:wx_ref, _, :wxStaticBoxSizer, _} ->
-          Logger.debug("  :wxBoxSizer.add(#{inspect(sizer)}, #{inspect(bs)}), []")
-          :wxBoxSizer.add(sizer, bs)
-
-        {:wx_ref, _, :wxBoxSizer, _} ->
-          Logger.debug("  :wxBoxSizer.add(#{inspect(sizer)}, #{inspect(bs)}), []")
-          :wxBoxSizer.add(sizer, bs)
-
+      case child do
         nil ->
-          case parent do
-            {:wx_ref, _, :wxPanel, []} ->
-              Logger.debug("  :wxPanel.setSizer(#{inspect(parent)}, #{inspect(bs)})")
-              :wxPanel.setSizer(parent, bs)
+          warn(indent, "wxBoxSizer has no children!")
 
-            {:wx_ref, _, :wxFrame, []} ->
-              Logger.debug("  :wxWindow.setSizer(#{inspect(parent)}, #{inspect(bs)})")
-              # :wxFrame.setSizerAndFit(parent, bs)
-              :wxWindow.setSizer(parent, bs)
+        child ->
+          :wxBoxSizer.add(bs, child,
+            proportion: opts[:proportion],
+            flag: opts[:flag],
+            border: opts[:border]
+          )
 
-            other ->
-              Logger.error("  BoxSizer: No sizer and parent = #{inspect(parent)}")
-          end
-
-        other ->
-          Logger.error("  BoxSizer: sizer = #{inspect(sizer)}")
+          debug(
+            indent,
+            ":wxBoxSizer.add(#{inspect(id)}, #{inspect(getObjectId(child))}, proportion: #{
+              inspect(opts[:proportion])
+            }, flag: #{inspect(opts[:flag])}, border: #{inspect(opts[:border])}"
+          )
       end
 
-      Logger.debug("boxSizer ---------------------------------------------------")
+      case parent do
+        {:wx_ref, _, :wxFrame, _} ->
+          debug(
+            indent,
+            ":wxBoxSizer.setSizeHints(#{inspect(id)}, #{inspect(getObjectId(parent))})"
+          )
+
+          :wxBoxSizer.setSizeHints(bs, parent)
+
+        _ ->
+          nil
+      end
+
+      # Logger.debug("boxSizer ---------------------------------------------------")
+      bs
     end
   end
 
@@ -251,7 +289,7 @@ defmodule WxDsl do
     quote do
       Logger.debug("Button +++++++++++++++++++++++++++++++++++++++++++++++++++++")
 
-      {container, parent, sizer} = stack_tos()
+      {container, parent, sizer, indent} = stack_tos()
       Logger.debug("  tos = #{inspect(container)}, #{inspect(parent)}, #{inspect(sizer)}}")
 
       new_id = :wx_misc.newId()
@@ -291,7 +329,7 @@ defmodule WxDsl do
     quote do
       Logger.debug("Button/1 +++++++++++++++++++++++++++++++++++++++++++++++++++++")
 
-      {container, parent, sizer} = stack_tos()
+      {container, parent, sizer, indent} = stack_tos()
       Logger.debug("  tos = #{inspect(container)}, #{inspect(parent)}, #{inspect(sizer)}}")
 
       new_id = :wx_misc.newId()
@@ -344,7 +382,7 @@ defmodule WxDsl do
     quote do
       Logger.debug("Event ++++++++++++++++++++++++++++++++++++++++++++++++++")
 
-      {container, parent, sizer} = stack_tos()
+      {container, parent, sizer, indent} = stack_tos()
       Logger.debug("  tos = #{inspect(container)}, #{inspect(parent)}, #{inspect(sizer)}}")
 
       # Logger.debug("  :wxEvtHandler.connect(#{inspect(parent)}, #{inspect(unquote(eventType))})")
@@ -379,7 +417,7 @@ defmodule WxDsl do
 
       # put_info(eventType, callBack)
       # Agent.update(state, &Map.put(&1, unquote(eventType), unquote(callBack)))
-      {container, parent, sizer} = stack_tos()
+      {container, parent, sizer, indent} = stack_tos()
       Logger.debug("  tos = #{inspect(container)}, #{inspect(parent)}, #{inspect(sizer)}}")
       new_id = :wx_misc.newId()
 
@@ -413,7 +451,7 @@ defmodule WxDsl do
   defmacro events(attributes) do
     quote do
       Logger.debug("Events +++++++++++++++++++++++++++++++++++++++++++++++++++++")
-      {container, parent, sizer} = stack_tos()
+      {container, parent, sizer, indent} = stack_tos()
       Logger.debug("  tos = {#{inspect(container)}, #{inspect(parent)}, #{inspect(sizer)}}")
 
       Logger.debug("  events: #{inspect(unquote(attributes))}")
@@ -425,13 +463,20 @@ defmodule WxDsl do
     end
   end
 
-  defmacro frame(attributes, do: block) do
+  @doc """
+  wxFrame(
+    id:     Id of frame (Atom)
+    title:  Title shown in title bar (String)
+    pos:    Initial posititon of window ({x, y})
+    size:   Initial size of window ({w, h})
+    style:  Window style (?)
+    )
+  """
+  defmacro wxFrame(attributes, do: block) do
     quote do
-      Logger.debug("Frame +++++++++++++++++++++++++++++++++++++++++++++++++++++")
+      # Logger.debug("Frame +++++++++++++++++++++++++++++++++++++++++++++++++++++")
 
-      {container, parent, sizer} = stack_tos()
-      Logger.debug("  tos = {#{inspect(parent)}, #{inspect(container)}, #{inspect(sizer)}}")
-
+      {container, parent, sizer, indent} = stack_tos()
       args_dict = Enum.into(unquote(attributes), %{})
 
       opts_list =
@@ -443,52 +488,53 @@ defmodule WxDsl do
             {:size, {_, _}} -> true
             {:style, _} -> true
             {:name, _} -> false
-            {arg, argv} -> Logger.error("    Illegal option #{inspect(arg)}: #{inspect(argv)}")
+            {arg, argv} -> error(indent, "Illegal option #{inspect(arg)}: #{inspect(argv)}")
           end
         end)
-
-      new_id = :wx_misc.newId()
-
-      Logger.debug(
-        "  :wxFrame.new(#{inspect(parent)}, #{inspect(new_id)}, #{
-          inspect(Map.get(args_dict, :title, "No title"))
-        },#{inspect(opts_list)}"
-      )
 
       frame =
         :wxFrame.new(
           container,
           # window id
-          new_id,
+          @wxID_ANY,
           # window title
           Map.get(args_dict, :title, "No title"),
           opts_list
           # [{:size, Map.get(opts, :size, {600, 400})}]
         )
 
-      Logger.debug("  Frame = #{inspect(frame)}")
+      debug(
+        indent,
+        "#{inspect(Map.get(args_dict, :id, "No Id"))} = :wxFrame.new(#{
+          inspect(getObjectId(container))
+        }, #{inspect(@wxID_ANY)}, #{inspect(Map.get(args_dict, :title, "No title"))},#{
+          inspect(opts_list)
+        })"
+      )
 
-      case container do
-        # put_info(:__main_frame__, frame)
-        {:wx_ref, _, :wx, _} ->
-          WinInfo.insert({:__main_frame__, new_id, frame})
+      WinInfo.insertObject(Map.get(args_dict, :id, :noname), frame, parent)
+      stack_push({frame, frame, nil, indent + 2})
+      child = unquote(block)
+      stack_pop()
+
+      case child do
+        {:wx_ref, _, :wxBoxSizer, _} ->
+          debug(
+            indent,
+            ":wxFrame.setSizer(#{inspect(getObjectId(frame))}, #{inspect(getObjectId(child))})"
+          )
+
+          :wxFrame.setSizer(frame, child)
+
+        nil ->
+          warn(indent, "Frame has no children!")
 
         _ ->
-          false
+          debug(indent, "Frame child was not sizer: #{inspect(child)}")
+          nil
       end
 
-      stack_push({frame, frame, nil})
-
-      WinInfo.insertCtrl(Map.get(args_dict, :id, :noname), frame)
-      # WinInfo.insert({Map.get(args_dict, :id, nil), new_id, frame})
-      # put_info(Map.get(args_dict, :id, nil), frame)
-      # put_xref(new_id, Map.get(args_dict, :id, nil))
-
-      unquote(block)
-      # WinInfo.insert({Map.get(args_dict, :id, nil), new_id, frame})
-      stack_pop()
-      Logger.debug("Frame -----------------------------------------------------")
-
+      # Logger.debug("Frame -----------------------------------------------------")
       frame
     end
   end
@@ -497,7 +543,7 @@ defmodule WxDsl do
     quote do
       Logger.debug("htmlWindow/1 +++++++++++++++++++++++++++++++++++++++++++++++++++++")
 
-      {container, parent, sizer} = stack_tos()
+      {container, parent, sizer, indent} = stack_tos()
       Logger.debug("  tos = {#{inspect(parent)}, #{inspect(container)}, #{inspect(sizer)}}")
 
       defaults = [style: nil, size: nil]
@@ -523,11 +569,11 @@ defmodule WxDsl do
     quote do
       Logger.debug("htmlWindow/2 +++++++++++++++++++++++++++++++++++++++++++++++++++++")
 
-      {container, parent, sizer} = stack_tos()
+      {container, parent, sizer, indent} = stack_tos()
 
       {id, new_id, win} = WxHtmlWindow.new(parent, unquote(attributes))
 
-      stack_push({container, win, sizer})
+      stack_push({container, win, sizer, indent + 2})
       unquote(block)
       stack_pop()
 
@@ -583,8 +629,8 @@ defmodule WxDsl do
     quote do
       Logger.debug("listCtrl/2 +++++++++++++++++++++++++++++++++++++++++++++++++++++")
       # new_id = :wx_misc.newId()
-      {container, parent, sizer} = stack_tos()
-     
+      {container, parent, sizer, indent} = stack_tos()
+
       defaults = [id: "_no_id_", style: nil, size: nil]
       {id, options, _restOpts} = getOptions(unquote(attributes), defaults)
 
@@ -632,7 +678,7 @@ defmodule WxDsl do
     quote do
       Logger.debug("listCtrlCol/2 +++++++++++++++++++++++++++++++++++++++++++++++++++++")
 
-      {container, parent, sizer} = stack_tos()
+      {container, parent, sizer, indent} = stack_tos()
 
       defaults = [col: 0, heading: ""]
       {_, options, restOpts} = getOptions(unquote(attributes), defaults)
@@ -649,7 +695,6 @@ defmodule WxDsl do
             nil
         end
 
- 
       parentName = WinInfo.getCtrlName(parent)
       colName = String.to_atom("#{Atom.to_string(parentName)}_col#{inspect(col)}")
 
@@ -665,10 +710,10 @@ defmodule WxDsl do
     end
   end
 
-  defmacro menu(attributes, do: block) do
+  defmacro wxMenu(attributes, do: block) do
     quote do
       Logger.debug("  Menu +++++++++++++++++++++++++++++++++++++++++++++++++++++++")
-      {container, parent, sizer} = stack_tos()
+      {container, parent, sizer, indent} = stack_tos()
       Logger.debug("  tos = #{inspect(container)}, #{inspect(parent)}, #{inspect(sizer)}}")
 
       opts = get_opts_map(unquote(attributes))
@@ -694,11 +739,11 @@ defmodule WxDsl do
     end
   end
 
-  defmacro menuBar(do: block) do
+  defmacro wxMenuBar(do: block) do
     quote do
       Logger.debug("Menu Bar +++++++++++++++++++++++++++++++++++++++++++++++++++")
 
-      {container, parent, sizer} = stack_tos()
+      {container, parent, sizer, indent} = stack_tos()
       Logger.debug("  tos = #{inspect(container)}, #{inspect(parent)}, #{inspect(sizer)}}")
 
       mb = :wxMenuBar.new()
@@ -716,10 +761,10 @@ defmodule WxDsl do
     end
   end
 
-  defmacro menuItem(attributes) do
+  defmacro wxMenuItem(attributes) do
     quote do
       Logger.debug("    Menu Item ++++++++++++++++++++++++++++++++++++++++++++++++++")
-      {container, parent, sizer} = stack_tos()
+      {container, parent, sizer, indent} = stack_tos()
       Logger.debug("  tos = #{inspect(container)}, #{inspect(parent)}, #{inspect(sizer)}}")
 
       defaults = [id: :unknown, text: "??"]
@@ -750,10 +795,10 @@ defmodule WxDsl do
     end
   end
 
-  defmacro menuRadioItem(attributes) do
+  defmacro wxMenuRadioItem(attributes) do
     quote do
       Logger.debug("    Menu Item ++++++++++++++++++++++++++++++++++++++++++++++++++")
-      {container, parent, sizer} = stack_tos()
+      {container, parent, sizer, indent} = stack_tos()
       Logger.debug("  tos = #{inspect(container)}, #{inspect(parent)}, #{inspect(sizer)}}")
 
       defaults = [id: :unknown, text: "??"]
@@ -786,10 +831,10 @@ defmodule WxDsl do
     end
   end
 
-  defmacro menuSeparator() do
+  defmacro wxMenuSeparator() do
     quote do
       Logger.debug("    Menu Separator +++++++++++++++++++++++++++++++++++++++++")
-      {container, parent, sizer} = stack_tos()
+      {container, parent, sizer, indent} = stack_tos()
       Logger.debug("  tos = #{inspect(container)}, #{inspect(parent)}, #{inspect(sizer)}}")
 
       new_id = :wx_misc.newId()
@@ -805,21 +850,15 @@ defmodule WxDsl do
     end
   end
 
-  defmacro panel(attributes, do: block) do
+  defmacro wxPanel(attributes, do: block) do
     quote do
-      Logger.debug("Panel +++++++++++++++++++++++++++++++++++++++++++++++++++++")
-      {container, parent, sizer} = stack_tos()
-      Logger.debug("  tos = #{inspect(container)}, #{inspect(parent)}, #{inspect(sizer)}}")
+      # Logger.debug("Panel +++++++++++++++++++++++++++++++++++++++++++++++++++++")
+      {container, parent, sizer, indent} = stack_tos()
 
-      defaults = [id: :unknown, pos: nil, size: nil, style: nil]
-      {id, options, errors} = WxUtilities.getOptions(unquote(attributes), defaults)
+      defaults = [id: "_no_id_", pos: nil, size: nil, style: nil]
+      {id, options, restOpts} = getOptions(unquote(attributes), defaults)
 
       new_id = :wx_misc.newId()
-
-      Logger.debug(
-        "  panel: {container, parent, sizer} = #{inspect(parent)}, #{inspect(container)}})"
-      )
-
       args_dict = Enum.into(unquote(attributes), %{})
 
       opts_list =
@@ -833,32 +872,34 @@ defmodule WxDsl do
           end
         end)
 
-      Logger.debug("  :wxPanel.new(#{inspect(parent)}, #{inspect(options)}")
-      # panel = :wxPanel.new(parent, size: {100, 100})
-      panel = :wxPanel.new(container, options)
+      panel = :wxPanel.new(parent, options)
 
-      # WinInfo.insert({id, new_id, panel})
-      WinInfo.insertCtrl(id, panel)
+      debug(
+        indent,
+        "#{inspect(id)} = :wxPanel.new(#{inspect(getObjectId(parent))}, #{inspect(options)})"
+      )
 
-      stack_push({container, panel, sizer})
-      Logger.debug("  stack_push({#{inspect(container)}, #{inspect(panel)}, #{inspect(sizer)}})")
-      unquote(block)
+      WinInfo.insertObject(id, panel, parent)
+
+      stack_push({container, panel, sizer, indent + 2})
+      child = unquote(block)
+      # info(indent, "wxPanel child = #{inspect(child)}")
       stack_pop()
 
-      case sizer do
+      case child do
         {:wx_ref, _, :wxBoxSizer, _} ->
-          Logger.debug("  :wxBoxSizer.add(#{inspect(sizer)}, #{inspect(panel)}), []")
-          :wxBoxSizer.add(sizer, panel, [])
+          debug(indent, ":wxPanel.setSizer(#{inspect(id)}, #{inspect(getObjectId(child))}))")
+          :wxPanel.setSizer(panel, child)
 
         {:wx_ref, _, :wxStaticBoxSizer, _} ->
-          Logger.debug("  :wxBoxSizer.add(#{inspect(sizer)}, #{inspect(panel)}), []")
-          :wxStaticBoxSizer.add(sizer, panel, [])
+          debug(indent, ":wxPanel.setSizer(#{inspect(id)}, #{inspect(getObjectId(child))}))")
+          :wxPanel.setSizer(panel, child)
 
-        nil ->
-          nil
+        _ ->
+          warn(indent, "Panel: Child is: #{inspect(child)}")
       end
 
-      Logger.debug("panel -----------------------------------------------------")
+      # Logger.debug("panel -----------------------------------------------------")
     end
   end
 
@@ -889,7 +930,7 @@ defmodule WxDsl do
     quote do
       Logger.debug("listCtrl/2 +++++++++++++++++++++++++++++++++++++++++++++++++++++")
       # new_id = :wx_misc.newId()
-      {container, parent, sizer} = stack_tos()
+      {container, parent, sizer, indent} = stack_tos()
       defaults = [id: "_no_id_", style: nil, size: nil]
       {id, options, _restOpts} = getOptions(unquote(attributes), defaults)
 
@@ -936,7 +977,7 @@ defmodule WxDsl do
     quote do
       Logger.debug("listCtrlCol/2 +++++++++++++++++++++++++++++++++++++++++++++++++++++")
 
-      {container, parent, sizer} = stack_tos()
+      {container, parent, sizer, indent} = stack_tos()
       defaults = [col: 0, heading: ""]
       {_, options, restOpts} = getOptions(unquote(attributes), defaults)
 
@@ -950,11 +991,10 @@ defmodule WxDsl do
             nil
         end
 
-
       parentName = WinInfo.getCtrlName(parent)
       colName = String.to_atom("#{Atom.to_string(parentName)}_col#{inspect(col)}")
 
-       WinInfo.insertCtrl(
+      WinInfo.insertCtrl(
         colName,
         {:wx_ref, :wx_misc.newId(), :wxListCtrlCol, [col: col, listCtrl: parent]}
       )
@@ -962,6 +1002,158 @@ defmodule WxDsl do
       Logger.debug("listCtrlCol/2 -----------------------------------------------------")
     end
   end
+
+
+  @doc """
+  wxSplitterWindow(
+    id:     Id of frame (Atom)
+    title:  Title shown in title bar (String)
+    pos:    Initial posititon of window ({x, y})
+    size:   Initial size of window ({w, h})
+    style:  Window style (?)
+    )
+  """
+  defmacro wxSplitterWindow(attributes, do: block) do
+    quote do
+      # Logger.debug("wxSplitterWindow +++++++++++++++++++++++++++++++++++++++++++++++++++")
+
+      {container, parent, sizer, indent} = stack_tos()
+
+      defaults = []
+      defaults = [style: @wxSP_NOBORDER]
+      {id, options, restOpts} = getOptions(unquote(attributes), defaults)
+
+      splitter = :wxSplitterWindow.new(parent, options)
+
+      debug(
+        indent,
+        "#{inspect(restOpts[:id])} = :wxSplitterWindow.new(#{inspect(getObjectId(parent))}, #{
+          inspect(options)
+        })"
+      )
+
+      case restOpts[:sashGravity] do
+        nil ->
+          debug(indent, "No sash gravity")
+
+        g ->
+          :wxSplitterWindow.setSashGravity(splitter, g)
+
+          debug(
+            indent,
+            ":wxSplitterWindow.setSashGravity(#{inspect(restOpts[:id])}, #{inspect(g)})"
+          )
+      end
+
+      case restOpts[:minPanelSize] do
+        nil ->
+          debug(indent, "No minimum panel size")
+
+        mps ->
+          :wxSplitterWindow.setMinimumPaneSize(splitter, mps)
+
+          debug(
+            indent,
+            ":wxSplitterWindow.setMinimumPaneSize(#{inspect(restOpts[:id])}, #{inspect(mps)})"
+          )
+      end
+
+      WinInfo.insertObject(restOpts[:id], splitter, parent)
+
+      stack_push({container, splitter, sizer, indent + 2})
+      unquote(block)
+      stack_pop()
+
+      # info(indent, "wins = #{inspect(getObjectsByParent(splitter))}")
+      children = getObjectsByParent(splitter)
+      # info(indent, "#{inspect(getObjectsByParent(children))}")
+
+      case length(children) do
+        0 ->
+          error(indent, "Splitter window has no children!")
+
+        1 ->
+          error(indent, "Splitter window needs 2 children, has only one!")
+
+        2 ->
+          {child1, rest} = List.pop_at(children, 0)
+          {child2, _} = List.pop_at(rest, 0)
+
+          splitOpts =
+            case restOpts[:sashPosition] do
+              nil -> []
+              _ -> [{:sashPosition, restOpts[:sashPosition]}]
+            end
+
+          case restOpts[:split] do
+            @wxHORIZONTAL ->
+              debug(
+                indent,
+                ":wxSplitterWindow.splitHorizontally(#{inspect(getObjectId(splitter))}, #{
+                  inspect(getObjectId(child1))
+                }, #{inspect(getObjectId(child2))})"
+              )
+
+              :wxSplitterWindow.splitHorizontally(splitter, child1, child2, splitOpts)
+
+            @wxVERTICAL ->
+              debug(
+                indent,
+                ":wxSplitterWindow.splitVertically(#{inspect(getObjectId(splitter))}, #{
+                  inspect(getObjectId(child1))
+                }, #{inspect(getObjectId(child2))})"
+              )
+
+              :wxSplitterWindow.splitVertically(splitter, child1, child2, splitOpts)
+
+            _ ->
+              error(
+                indent,
+                "Splitter window split: Invalid argument: #{inspect(restOpts[:split])}"
+              )
+          end
+
+          debug(
+            indent,
+            ":wxSplitterWindow.splitVertically(#{inspect(getObjectId(splitter))}, #{
+              inspect(getObjectId(child1))
+            }, #{inspect(getObjectId(child2))})"
+          )
+
+          :wxSplitterWindow.splitVertically(splitter, child1, child2)
+
+        _ ->
+          error(
+            indent,
+            "Splitter window needs 2 children, #{inspect(length(children))} supplied!"
+          )
+      end
+
+      # Logger.debug("wxSplitterWindow ---------------------------------------------------")
+      splitter
+    end
+  end
+
+  # defmacro splitVertically(splitter, win1, win2) do
+  #   quote do
+  #     Logger.debug("splitVertically ++++++++++++++++++++++++++++++++++++++++++++++++++")
+  #     splitter = WinInfo.getWxObject(unquote(splitter))
+  #     win1 = WinInfo.getWxObject(unquote(win1))
+  #     win2 = WinInfo.getWxObject(unquote(win2))
+  #
+  #     # parent = :wxWindow.getParent(win1)
+  #     # Logger.debug("  Parent = #{inspect(parent)}")
+  #
+  #     Logger.debug(
+  #       "  :wxSplitterWindow.splitVertically(#{inspect(splitter)}, #{inspect(win1)}, #{
+  #         inspect(win2)
+  #       })"
+  #     )
+  #
+  #     :wxSplitterWindow.splitVertically(splitter, win1, win2)
+  #     Logger.debug("splitVertically  --------------------------------------------------")
+  #   end
+  # end
 
   def setEvents(events) do
     Logger.debug("setEvents ++++++++++++++++++++++++++++++++++++++++++++++++++")
@@ -993,12 +1185,140 @@ defmodule WxDsl do
   end
 
   @doc """
-  Create a new box sizer.
+  A wxBoxSizer can lay out its children either vertically or horizontally, depending
+  on what flag is being used in its constructor.
+
+  When using a vertical sizer, each child can be centered, aligned to the right
+  or aligned to the left.
+
+  Correspondingly, when using a horizontal sizer, each child can be centered,
+  aligned at the bottom or aligned at the top.
+
+  The stretch factor is used for the main orientation, i.e. when using a
+  horizontal box sizer, the stretch factor determines how much the child can be
+  stretched horizontally.
+
+  | option      | Description                                             | Value     | Default   |
+  | ----------- | ------------------------------------------------------- | --------- | --------- |
+  | id          | The name by which the box sizer will be referred to.    | atom()    | none      |
+  | :orient     | Orientation: @wxVERTICAL or @wxHORIZONTAL               | integer() |@wxVERTICAL|
+  | :proportion | The proportion that the enclosed object will be resized | integer() | 1         |
+  |             | (stretched) when the enclosing control is resized.      |           |           |
+  |             | 0 - No resizing                                         |           |           |
+  |             | 1 - In proportion                                       |           |           |
+  |             | n - 1:n                                                 |           |           |
+  | :flag       | @wxEXPAND: Make stretchable                             | integer() | @wxEXPAND |
+  |             | @wxALL:    Make a border all around                     |           |           |
+  | :border     | Width of the border                                     | integer() | 0         |
+  Example:
+
+  ```
+  wxBoxSizer(
+    id: :txt1sizer,
+    orient: @wxVERTICAL,
+    proportion: 1,
+    flag: @wxEXPAND,
+    border: 0
+  ) do
+
+  ...
+
+  end
+
+
   """
-  defmacro staticBoxSizer(attributes, do: block) do
+  defmacro wxStaticBoxSizer(attributes, do: block) do
+    quote do
+      # Logger.debug("Static Box Sizer ++++++++++++++++++++++++++++++++++++++++++++++++++")
+      {container, parent, sizer, indent} = stack_tos()
+
+      # Get the function attributes
+      defaults = [
+        id: nil,
+        label: "",
+        orient: @wxHORIZONTAL,
+        proportion: 1,
+        flag: @wxEXPAND,
+        border: 0,
+        minSize: nil
+      ]
+
+      {id, opts, errs} = getOptions(unquote(attributes), defaults)
+
+      if length(errs) > 0 do
+        warn(indent, "Unexpected option(s): #{inspect(errs)}")
+      end
+
+      bs = :wxStaticBoxSizer.new(opts[:orient], parent, label: opts[:label])
+      WinInfo.insertObject(id, bs, parent)
+
+      debug(
+        indent,
+        "#{inspect(getObjectId(bs))} = :wxStaticBoxSizer.new(#{inspect(opts[:orient])})"
+      )
+
+      stack_push({container, parent, bs, indent + 2})
+      child = unquote(block)
+      stack_pop()
+
+      case child do
+        nil ->
+          warn(indent, "wxStaticBoxSizer has no children!")
+
+        child ->
+          :wxBoxSizer.add(bs, child,
+            proportion: opts[:proportion],
+            flag: opts[:flag],
+            border: opts[:border]
+          )
+
+          debug(
+            indent,
+            ":wxStaticBoxSizer.add(#{inspect(id)}, #{inspect(getObjectId(child))}, proportion: #{
+              inspect(opts[:proportion])
+            }, flag: #{inspect(opts[:flag])}, border: #{inspect(opts[:border])}"
+          )
+      end
+
+      case parent do
+        {:wx_ref, _, :wxFrame, _} ->
+          debug(
+            indent,
+            ":wxStaticBoxSizer.setSizeHints(#{inspect(id)}, #{inspect(getObjectId(parent))})"
+          )
+
+          :wxStaticBoxSizer.setSizeHints(bs, parent)
+
+        _ ->
+          nil
+      end
+
+      case opts[:minSize] do
+        nil ->
+          nil
+
+        _ ->
+          debug(
+            indent,
+            ":wxStaticBoxSizer.setMinSize(#{inspect(id)}, #{inspect(opts[:minSize])}"
+          )
+
+          :wxStaticBoxSizer.setMinSize(bs, opts[:minSize])
+      end
+
+      # Logger.debug("boxSizer ---------------------------------------------------")
+      bs
+    end
+  end
+
+  @doc """
+  Create a new box sizer.
+
+  """
+  defmacro wxStaticBoxSizerxxx(attributes, do: block) do
     quote do
       Logger.debug("Static Box Sizer ++++++++++++++++++++++++++++++++++++++++++++++++++")
-      {container, parent, sizer} = stack_tos()
+      {container, parent, sizer, indent} = stack_tos()
       Logger.debug("   tos = #{inspect(container)}, #{inspect(parent)}, #{inspect(sizer)}}")
 
       opts = get_opts_map(unquote(attributes))
@@ -1038,8 +1358,13 @@ defmodule WxDsl do
               # :wxFrame.setSizerAndFit(parent, bs)
               :wxWindow.setSizer(parent, bs)
 
+            {:wx_ref, _, :wxSplitterWindow, []} ->
+              Logger.debug("  :wxWindow.setSizer(#{inspect(parent)}, #{inspect(bs)})")
+              # :wxFrame.setSizerAndFit(parent, bs)
+              :wxWindow.setSizer(parent, bs)
+
             other ->
-              Logger.error("  BoxSizer: No sizer and parent = #{inspect(parent)}")
+              Logger.error("  BoxSizer: No parent = #{inspect(parent)}")
           end
 
         other ->
@@ -1053,7 +1378,7 @@ defmodule WxDsl do
   defmacro staticText(attributes) do
     quote do
       Logger.debug("staticText/1 +++++++++++++++++++++++++++++++++++++++++++++++++++++")
-      {container, parent, sizer} = stack_tos()
+      {container, parent, sizer, indent} = stack_tos()
       Logger.debug("  tos = #{inspect(container)}, #{inspect(parent)}, #{inspect(sizer)}}")
 
       attributes = unquote(attributes)
@@ -1117,7 +1442,7 @@ defmodule WxDsl do
   defmacro statusBar(attributes) do
     quote do
       Logger.debug("Status Bar +++++++++++++++++++++++++++++++++++++++++++++++++")
-      {container, parent, sizer} = stack_tos()
+      {container, parent, sizer, indent} = stack_tos()
       Logger.debug("  tos = #{inspect(container)}, #{inspect(parent)}, #{inspect(sizer)}}")
 
       {id, new_id, sb} = WxStatusBar.new(parent, unquote(attributes))
@@ -1133,11 +1458,11 @@ defmodule WxDsl do
     quote do
       Logger.debug("styledTextWindow/2 +++++++++++++++++++++++++++++++++++++++++++++++++++++")
 
-      {container, parent, sizer} = stack_tos()
+      {container, parent, sizer, indent} = stack_tos()
 
       {id, new_id, win} = WxStyledTextCtrl.new(parent, unquote(attributes))
 
-      stack_push({container, win, sizer})
+      stack_push({container, win, sizer, indent + 2})
       unquote(block)
       stack_pop()
 
@@ -1152,7 +1477,7 @@ defmodule WxDsl do
     quote do
       Logger.debug("scrolledWindow/2 +++++++++++++++++++++++++++++++++++++++++++++++++++++")
 
-      {container, parent, sizer} = stack_tos()
+      {container, parent, sizer, indent} = stack_tos()
       Logger.debug("  tos = {#{inspect(parent)}, #{inspect(container)}, #{inspect(sizer)}}")
 
       # to be done
@@ -1173,7 +1498,7 @@ defmodule WxDsl do
 
       WinInfo.insert({id, new_id, win})
 
-      stack_push({container, win, sizer})
+      stack_push({container, win, sizer, indent + 2})
       unquote(block)
       stack_pop()
 
@@ -1183,16 +1508,14 @@ defmodule WxDsl do
     end
   end
 
-  defmacro textControl(attributes) do
+  defmacro wxTextCtrl(attributes) do
     quote do
-      Logger.debug("textControl/1 +++++++++++++++++++++++++++++++++++++++++++++++++++++")
+      # Logger.debug("textControl/1 +++++++++++++++++++++++++++++++++++++++++++++++++++++")
 
-      {container, parent, sizer} = stack_tos()
-      Logger.debug("  tos = #{inspect(container)}, #{inspect(parent)}, #{inspect(sizer)}}")
+      {container, parent, sizer, indent} = stack_tos()
 
       new_id = :wx_misc.newId()
       attributes = unquote(attributes)
-      Logger.debug("  textCtrl: attributes=#{inspect(attributes)}")
 
       attrs = get_opts_map(attributes)
 
@@ -1200,6 +1523,15 @@ defmodule WxDsl do
         Enum.filter(attributes, fn attr ->
           case attr do
             {:value, _} ->
+              true
+
+            {:size, _} ->
+              true
+
+            {:pos, _} ->
+              true
+
+            {:style, _} ->
               true
 
             {:id, _} ->
@@ -1211,32 +1543,44 @@ defmodule WxDsl do
           end
         end)
 
-      Logger.debug("  :wxTextCtrl.new(#{inspect(container)}, new_id, #{inspect(options)})")
-      tc = :wxTextCtrl.new(container, new_id, options)
+      tc = :wxTextCtrl.new(parent, new_id, options)
+      WinInfo.insertObject(Map.get(attrs, :id, nil), tc, parent)
 
-      case parent do
-        {:wx_ref, _, :wxBoxSizer, _} ->
-          Logger.debug("  :wxBoxSizer.add(#{inspect(parent)}, #{inspect(tc)}), []")
-          :wxBoxSizer.add(parent, tc, [])
+      debug(
+        indent,
+        "#{inspect(getObjectId(tc))} = :wxTextCtrl.new(#{inspect(getObjectId(parent))}, new_id, #{
+          inspect(options)
+        })"
+      )
 
-        {:wx_ref, _, :wxStaticBoxSizer, _} ->
-          Logger.debug("  :wxBoxSizer.add(#{inspect(parent)}, #{inspect(tc)}), []")
-          :wxStaticBoxSizer.add(parent, tc, [])
-      end
+      # Logger.debug("textControl/1 -----------------------------------------------------")
+      tc
+    end
+  end
 
-      WinInfo.insert({Map.get(attrs, :id, nil), new_id, tc})
+  defmacro wxTextCtrl() do
+    quote do
+      # Logger.debug("textControl/1 +++++++++++++++++++++++++++++++++++++++++++++++++++++")
 
-      Logger.debug("textControl/1 -----------------------------------------------------")
+      {container, parent, sizer, indent} = stack_tos()
 
-      # stack_push( sb)
-      # unquote(block)
+      tc = :wxTextCtrl.new(parent, -1, [])
+      WinInfo.insertObject(nil, tc, parent)
+
+      debug(
+        indent,
+        "wxTextCtrl = :wxTextCtrl.new(#{inspect(getObjectId(parent))}, -1, [])"
+      )
+
+      # Logger.debug("textControl/1 -----------------------------------------------------")
+      tc
     end
   end
 
   defmacro tool(attributes) do
     quote do
       Logger.debug("  Tool +++++++++++++++++++++++++++++++++++++++++++++++++++++++")
-      {container, parent, sizer} = stack_tos()
+      {container, parent, sizer, indent} = stack_tos()
       Logger.debug("  tos = #{inspect(container)}, #{inspect(parent)}, #{inspect(sizer)}}")
 
       defaults = [id: :unknown, bitmap: nil, icon: nil, png: nil]
@@ -1297,7 +1641,7 @@ defmodule WxDsl do
     quote do
       Logger.debug("Tool Bar +++++++++++++++++++++++++++++++++++++++++++++++++++")
 
-      {container, parent, sizer} = stack_tos()
+      {container, parent, sizer, indent} = stack_tos()
       Logger.debug("  tos = #{inspect(container)}, #{inspect(parent)}, #{inspect(sizer)}}")
 
       Logger.debug("  :wxFrame.createToolBar(#{inspect(parent)})")
@@ -1339,11 +1683,11 @@ defmodule WxDsl do
     quote do
       Logger.debug("Window/2 +++++++++++++++++++++++++++++++++++++++++++++++++++++")
 
-      {container, parent, sizer} = stack_tos()
+      {container, parent, sizer, indent} = stack_tos()
 
       {id, new_id, win} = WxWindow.new(parent, unquote(attributes))
 
-      stack_push({container, win, sizer})
+      stack_push({container, win, sizer, indent + 2})
       unquote(block)
       stack_pop()
 
@@ -1358,7 +1702,7 @@ defmodule WxDsl do
     quote do
       Logger.debug("Window/1 +++++++++++++++++++++++++++++++++++++++++++++++++++++")
 
-      {container, parent, sizer} = stack_tos()
+      {container, parent, sizer, indent} = stack_tos()
       Logger.debug("  tos = {#{inspect(parent)}, #{inspect(container)}, #{inspect(sizer)}}")
 
       defaults = [style: nil, size: nil]
@@ -1397,5 +1741,22 @@ defmodule WxDsl do
 
   def get_opts_map([next | attrs], args) do
     get_opts_map(attrs, [next | args])
+  end
+
+  # LOGGING
+  def info(pad, str) do
+    Logger.info(String.pad_leading(str, String.length(str) + pad))
+  end
+
+  def warn(pad, str) do
+    Logger.warn(String.pad_leading(str, String.length(str) + pad))
+  end
+
+  def error(pad, str) do
+    Logger.error(String.pad_leading(str, String.length(str) + pad))
+  end
+
+  def debug(pad, str) do
+    Logger.debug(String.pad_leading(str, String.length(str) + pad))
   end
 end

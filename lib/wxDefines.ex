@@ -3492,6 +3492,17 @@ defmodule WxDefines do
       @wxXRC_USE_LOCALE 1
       @wxXRC_NO_SUBCLASSING 2
       @wxXRC_NO_RELOADING 4
+
+      # From "splitter.h"
+      @wxSP_BORDER 512
+      @wxSP_NO_XP_THEME 1024
+      @wxSP_3DBORDER 512
+      @wxSP_3DSASH 256
+      @wxSP_LIVE_UPDATE 128
+      @wxSP_PERMIT_UNSPLIT 64
+      @wxSP_NOSASH 16
+      @wxSP_NOBORDER 0
+      @wxSP_3D @wxSP_3DBORDER ||| @wxSP_3DSASH
     end
   end
 end

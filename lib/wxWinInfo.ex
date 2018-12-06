@@ -9,14 +9,14 @@ defmodule WinInfo do
     | item | Description                                                      | Value     |
     | --------- | --------------------------------------------------------    | --------- |
     | name      | The id supplied when the component is created               | atom()    |
-    | id        | An unique integer id created when the component is created. | Integer() |
     | object    | The WxWindows object reference.                             |           |
+    | parent    | The id of the parent of this object.                        | atom      |
 
   This module provides an interface to the information.
   """
   def createInfoTable() do
     try do
-      :ets.new(table_name(), [:set, :protected, :named_table])
+      :ets.new(table_name(), [:ordered_set, :protected, :named_table])
       :ok
     rescue
       _ ->
@@ -26,9 +26,61 @@ defmodule WinInfo do
   end
 
   @doc """
+  Insert an object into the table.
+  """
+  def insertObject(id, obj) do
+    :ets.insert_new(table_name(), {id, obj, nil})
+  end
+
+  @doc """
+  Add a new object to the object table
+  """
+  def insertObject(id, obj, parent) do
+    id =
+      case id do
+        nil ->
+          {_, id, name, _} = obj
+          String.to_atom("#{to_string(name)}_#{inspect(id)}")
+
+        _ ->
+          id
+      end
+
+    case getObject(id) do
+      nil -> :ets.insert_new(table_name(), {id, obj, parent})
+      _ -> Logger.error("insertObject: Object already exists: #{inspect(id)}")
+    end
+  end
+
+  @doc """
+  Given the atom id of an object, return the object
+  """
+  def getObject(id) do
+    case :ets.lookup(table_name(), id) do
+      {_id, obj, _parent} -> obj
+      [{_id, obj, _parent}] -> obj
+      [] -> nil
+    end
+  end
+
+  def getObjectId(object) do
+    matches = :ets.match(table_name(), {:"$1", object, :_})
+    List.first(List.flatten(matches))
+  end
+
+  @doc """
+  return a list of all objects having the given parent.
+  """
+  def getObjectsByParent(parent) do
+    matches = :ets.match(table_name(), {:_, :"$1", parent})
+    List.flatten(matches)
+  end
+
+  @doc """
   Insert window information into the winInfo table.
   """
   def insert(value) do
+    Logger.warn("WinInfo.insert(value) is Deprecated.")
     :ets.insert_new(table_name(), value)
   end
 
@@ -36,15 +88,19 @@ defmodule WinInfo do
   Insert window information into the winInfo table.
   """
   def insertCtrl(name, control) do
+    Logger.warn("WinInfo.insertCtrl(name, control) is Deprecated.")
     {_, id, _, _} = control
     :ets.insert_new(table_name(), {name, id, control})
   end
 
   def insertCtrl(name, id, control) do
+    Logger.warn("WinInfo.insertCtrl(name, id, control) is Deprecated.")
     :ets.insert_new(table_name(), {name, id, control})
   end
 
   def getCtrlName({_, id, _, _}) do
+    Logger.warn("WinInfo.getCtrlName({_, id, _, _}) is Deprecated.")
+
     # {_, id, _, _} = ctrl
     res = :ets.match_object(table_name(), {:_, id, :_})
     {name, _id, _obj} = List.first(res)
@@ -52,6 +108,7 @@ defmodule WinInfo do
   end
 
   def getCtrlName(id) when is_integer(id) do
+    Logger.warn("WinInfo.getCtrlName(id) is Deprecated.")
     # {_, id, _, _} = ctrl
     res = :ets.match_object(table_name(), {:_, id, :_})
     {name, _id, _obj} = List.first(res)
@@ -62,6 +119,8 @@ defmodule WinInfo do
   Given the name or id of a the window object, return it.
   """
   def getWxObject(key) do
+    Logger.warn("WinInfo.getWxObject(key) is Deprecated.")
+
     res =
       cond do
         is_atom(key) -> :ets.lookup(table_name(), key)
@@ -90,28 +149,11 @@ defmodule WinInfo do
   end
 
   # ---------
-
-  @doc """
-  Given an atom (The window id), get the info tuple.
-  returns {name, id, obj}
-  """
-  # def get_by_name(name) do
-  #   # display_table()
-  #   res = :ets.lookup(table_name(), name)
-  #
-  #   {name, id, obj} =
-  #     case length(res) do
-  #       0 -> {nil, nil, nil}
-  #       _ -> List.first(res)
-  #     end
-  #
-  #   {name, id, obj}
-  # end
-
   @doc """
   Retrieve data from the ets table
   """
   def getWindowId(id) when is_atom(id) do
+    Logger.warn("WinInfo.getWindowId(id) is Deprecated.")
     res = :ets.match_object(table_name(), {:_, id, :_})
 
     {name, id, obj} =
@@ -128,7 +170,8 @@ defmodule WinInfo do
   returns {name, id, obj}
   """
   def get_by_id(id) do
-    # Logger.error("get_by_id(#{inspect(id)})")
+    Logger.warn("WinInfo.get_by_id(id) is Deprecated.")
+
     res = :ets.match_object(table_name(), {:_, id, :_})
 
     {name, id, obj} =
@@ -144,6 +187,7 @@ defmodule WinInfo do
 
   """
   def get_object_name(id) do
+    Logger.warn("WinInfo.get_object_name(id) is Deprecated.")
     {name, _id, _obj} = get_by_id(id)
     name
   end
